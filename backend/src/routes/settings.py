@@ -29,16 +29,22 @@ def api_update_settings():
 @bp.route('/api/settings/site-url', methods=['GET'])
 def api_get_site_url():
     """获取当前站点公开访问地址 + 自动检测的局域网 IP。"""
+    from flask import request, has_request_context
     db = get_db()
     row = db.execute("SELECT value FROM settings WHERE key = 'site_url'").fetchone()
     site_url = row['value'] if row else ''
     lan_ip = get_lan_ip()
     current = get_fill_base_url()
+    # 仅在「本机 localhost 访问」场景下才把探测到的 IP 当作局域网地址展示，
+    # 避免 Cloudflare 隧道 / 公网访问时把隧道内网虚拟 IP 误当成局域网地址。
+    host = (request.host or '').lower() if has_request_context() else ''
+    is_local_access = bool(host) and (host.startswith('127.') or host in ('localhost', 'localhost:5000'))
+    lan_url = f'http://{lan_ip}:5000' if (lan_ip and is_local_access) else ''
     return jsonify({'code': 0, 'data': {
         'site_url': site_url,
-        'lan_ip': lan_ip,
+        'lan_ip': lan_ip if is_local_access else '',
         'current': current,
-        'lan_url': f'http://{lan_ip}:5000' if lan_ip else '',
+        'lan_url': lan_url,
     }})
 
 

@@ -46,19 +46,39 @@ def get_lan_ip():
 def get_fill_base_url():
     """获取填写页面的公开访问基址。
 
-    优先级：数据库 settings.site_url > 局域网 IP > 请求 host。
-    绝不返回 127.0.0.1 / localhost。
+    优先级：数据库 settings.site_url（管理员在「系统设置」显式填写，生产首选）
+            > 请求实际到达的主机头（经 ProxyFix 识别 X-Forwarded 头，自动适配
+              局域网 / Cloudflare 隧道 / 公网域名 / Railway，绝不会是内网虚拟 IP）
+            > 局域网 IP 兜底（仅在本机 localhost 访问时用于同网段扫码）。
+    绝不返回 127.0.0.1 / localhost（除非完全没有请求上下文且无局域网 IP）。
     """
-    from .db import get_db
-    db = get_db()
-    row = db.execute("SELECT value FROM settings WHERE key = 'site_url'").fetchone()
-    if row and row['value']:
-        return row['value'].rstrip('/')
+    # 1) 数据库显式设置的站点地址
+    try:
+        from .db import get_db
+        db = get_db()
+        row = db.execute("SELECT value FROM settings WHERE key = 'site_url'").fetchone()
+        if row and row['value']:
+            return row['value'].rstrip('/')
+    except Exception:
+        pass
+
+    # 2) 请求实际到达的主机——自动反映客户端真正使用的地址
+    from flask import request, has_request_context
+    if has_request_context():
+        host = (request.host or '').lower()
+        # 通过公网域名 / 隧道 / Railway / 局域网其他设备访问时，直接用该主机头
+        if host and not host.startswith('127.') and host not in ('localhost', 'localhost:5000'):
+            return request.host_url.rstrip('/')
+        # 仅在本机 localhost 访问时才退回局域网 IP，方便同网段设备扫码
+        lan = get_lan_ip()
+        if lan:
+            return f'http://{lan}:5000'
+
+    # 3) 兜底：局域网 IP
     lan = get_lan_ip()
     if lan:
         return f'http://{lan}:5000'
-    from flask import request
-    return request.host_url.rstrip('/')
+    return 'http://localhost:5000'
 
 
 def now_str():

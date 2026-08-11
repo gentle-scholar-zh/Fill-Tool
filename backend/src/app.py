@@ -4,6 +4,7 @@ import os
 
 from flask import Flask
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .config import PROJECT_ROOT
 from .db import init_db, close_db
@@ -13,6 +14,10 @@ from .routes import register_routes
 def create_app() -> Flask:
     app = Flask(__name__, static_folder=None)
     app.secret_key = 'tool-backend-secret-2026'
+
+    # 信任反向代理（Cloudflare Tunnel / Cloudflare CDN / Railway / Nginx）转发的头，
+    # 使 request.scheme / request.host 反映真实公网值，避免分享/二维码链接被拼成内网地址。
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     # 同源部署：前端由本服务直接提供，CORS 仅作为本地开发便利保留。
     # 可通过环境变量 CORS_ORIGINS=domain1,domain2 追加允许的跨域来源。
