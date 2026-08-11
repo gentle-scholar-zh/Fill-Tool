@@ -6,6 +6,7 @@ PROJECT_ROOT 指向 backend/ 目录（本文件位于 backend/src/config.py）�
 """
 import os
 import socket
+import ipaddress
 from datetime import datetime
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,21 +44,54 @@ def get_lan_ip():
     return None
 
 
+def _is_private_host(host):
+    """判断一个 host（可带 scheme:// 与端口）是否为内网/私有/回环/链路本地地址。
+
+    返回 True 表示「绝不可用于拼公网填写链接」（含 127.x / 10.x /
+    172.16-31.x / 192.168.x / 169.254.x / localhost）。
+    非 IP 字面量（真实域名，如 huanhuan.dpdns.org）返回 False → 视为安全。
+    """
+    if not host:
+        return True
+    s = str(host).strip()
+    # 去掉 scheme://（http://、https:// 等）
+    if '://' in s:
+        s = s.split('://', 1)[1]
+    # 去掉路径与查询
+    s = s.split('/', 1)[0]
+    h = s.split(':')[0].strip().lower()
+    if h in ('localhost', '0.0.0.0', ''):
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+        return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast
+    except ValueError:
+        # 不是 IP 字面量 → 是域名，安全
+        return False
+
+
 def get_fill_base_url():
     """获取填写页面的公开访问基址。
 
-    优先级：数据库 settings.site_url（管理员在「系统设置」显式填写，生产首选）
-            > 请求实际到达的主机头（经 ProxyFix 识别 X-Forwarded 头，自动适配
-              局域网 / Cloudflare 隧道 / 公网域名 / Railway，绝不会是内网虚拟 IP）
-            > 局域网 IP 兜底（仅在本机 localhost 访问时用于同网段扫码）。
-    绝不返回 127.0.0.1 / localhost（除非完全没有请求上下文且无局域网 IP）。
+    优先级（由高到低）：
+      0) 环境变量 BASE_URL / SITE_URL（运维在 Railway/容器显式指定公网域名）
+      1) 数据库 settings.site_url（管理员在「系统设置」填写）
+      2) 请求实际到达的主机头（经 ProxyFix 识别 X-Forwarded，自动适配隧道/域名/Railway）
+      3) 局域网 IP 兜底（仅本机 localhost 访问时用于同网段扫码）
+    关键：任何「私有/内网 IP」（含 10.255.254.20 这类容器虚拟 IP）一律被拒绝，
+          绝不会拼进填写/分享/二维码链接。
     """
-    # 1) 数据库显式设置的站点地址
+    # 0) 运维环境变量（最高优先级，便于容器直接指定公网域名）
+    env_base = (os.environ.get('BASE_URL') or os.environ.get('SITE_URL') or '').strip()
+    if env_base:
+        return env_base.rstrip('/')
+
+    # 1) 数据库显式设置的站点地址（拒绝内网 IP）
     try:
         from .db import get_db
         db = get_db()
         row = db.execute("SELECT value FROM settings WHERE key = 'site_url'").fetchone()
-        if row and row['value']:
+        if row and row['value'] and not _is_private_host(row['value']):
             return row['value'].rstrip('/')
     except Exception:
         pass
@@ -66,8 +100,8 @@ def get_fill_base_url():
     from flask import request, has_request_context
     if has_request_context():
         host = (request.host or '').lower()
-        # 通过公网域名 / 隧道 / Railway / 局域网其他设备访问时，直接用该主机头
-        if host and not host.startswith('127.') and host not in ('localhost', 'localhost:5000'):
+        # 仅当 host 是「公网域名或公网 IP」时才采用，内网/私有地址一律拒绝
+        if host and not _is_private_host(host):
             return request.host_url.rstrip('/')
         # 仅在本机 localhost 访问时才退回局域网 IP，方便同网段设备扫码
         lan = get_lan_ip()

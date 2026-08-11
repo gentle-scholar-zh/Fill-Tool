@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, send_file
 from docx import Document
 
-from ..config import TPL_DIR, get_fill_base_url
+from ..config import TPL_DIR, get_fill_base_url, _is_private_host
 from ..db import get_db, gen_id, now_str
 from ..utils import (infer_type, docx_to_type, extract_placeholders,
                      extract_placeholders_xlsx, safe_filename, tpl_to_dict)
@@ -174,6 +174,14 @@ def api_template_qrcode(tid):
     base_url = (request.args.get('base') or '').strip().rstrip('/')
     if not base_url:
         base_url = get_fill_base_url()
+    # 安全兜底：拒绝「不可达」的内网/容器私有地址（如 10.255.254.20 这类隧道/容器虚拟 IP），
+    # 但允许本地回环(127.0.0.1 / localhost)以便本机开发调试。
+    if _is_private_host(base_url):
+        host_part = base_url.split('://', 1)[-1].split('/')[0].split(':')[0].lower()
+        if host_part not in ('127.0.0.1', 'localhost', '::1'):
+            base_url = ''
+    if not base_url:
+        return jsonify({'code': 1, 'message': '无法生成公网访问链接：请在「系统设置」填写站点公网地址，或在部署平台设置环境变量 BASE_URL'}), 400
     fill_url = f'{base_url}/fill/{tid}'
 
     import qrcode
