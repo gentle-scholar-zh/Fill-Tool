@@ -2,7 +2,7 @@
 """应用工厂：创建 Flask 应用、配置 CORS、注册路由与数据库钩子。"""
 import os
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -33,6 +33,19 @@ def create_app() -> Flask:
     }})
 
     app.teardown_appcontext(close_db)
+
+    @app.after_request
+    def _no_cache_frontend(resp):
+        """前端页面/静态资源（HTML/JS/CSS）禁止被 Cloudflare 边缘或浏览器长期缓存，
+        否则每次部署后要等数小时才生效。API 响应保持默认（按业务自行控制）。"""
+        path = request.path
+        if (path.startswith('/admin') or path.startswith('/user')
+                or path.startswith('/fill') or path in ('/', '/admin/', '/user/')):
+            resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+        return resp
+
     register_routes(app)
     return app
 
