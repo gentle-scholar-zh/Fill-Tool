@@ -63,6 +63,40 @@ def api_set_site_url():
     return jsonify({'code': 0, 'data': get_fill_base_url()})
 
 
+@bp.route('/api/debug/url', methods=['GET'])
+def api_debug_url():
+    """临时诊断接口：返回当前请求的实际环境（host/scheme/site_url/最终 base_url），
+    用于排查「生成的链接到底来自哪个后端」。访问此接口即可看到根因。
+    """
+    from flask import request, has_request_context
+    info = {'code': 0, 'data': {}}
+    if has_request_context():
+        info['data']['host'] = request.host
+        info['data']['scheme'] = request.scheme
+        info['data']['url_root'] = request.url_root
+        info['data']['headers'] = {k: v for k, v in request.headers.items()
+                                    if k.lower() in (
+                                        'host', 'x-forwarded-proto', 'x-forwarded-host',
+                                        'cf-connecting-ip', 'cf-ray', 'x-real-ip',
+                                    )}
+    info['data']['site_url_db'] = ''
+    try:
+        db = get_db()
+        row = db.execute("SELECT value FROM settings WHERE key = 'site_url'").fetchone()
+        info['data']['site_url_db'] = row['value'] if row else ''
+    except Exception as e:
+        info['data']['db_err'] = str(e)
+    info['data']['resolved_base_url'] = get_fill_base_url()
+    info['data']['detected_lan_ip'] = get_lan_ip()
+    info['data']['db_path'] = ''
+    try:
+        from ..config import DB_PATH
+        info['data']['db_path'] = DB_PATH
+    except Exception:
+        pass
+    return jsonify(info), 200, {'Cache-Control': 'no-store, no-cache, must-revalidate'}
+
+
 @bp.route('/api/settings/retention', methods=['PUT'])
 def api_update_retention():
     data = request.get_json() or {}
