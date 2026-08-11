@@ -344,7 +344,9 @@ async function submitSingle() {
 
 // ========== 成功页（下载 / 重新编辑） ==========
 function renderSuccess(d, isSingle) {
-  const remaining = (VERIFIED.slots || []).filter(s => !s.submitted);
+  // isSingle=true 时走的是「未关联名单直接提交」路径，VERIFIED 为 null，绝不能访问 .slots
+  const allSlots = (VERIFIED && VERIFIED.slots) || [];
+  const remaining = isSingle ? [] : allSlots.filter(s => !s.submitted);
   const nextAct = (!isSingle && remaining.length)
     ? `<button class="btn btn--primary" id="next">继续填写下一个（剩 ${remaining.length} 份）</button>`
     : '';
@@ -356,12 +358,12 @@ function renderSuccess(d, isSingle) {
         <button class="btn btn--primary" id="dl">⬇ 下载本地（docx）</button>
         ${isSingle ? '' : '<button class="btn btn--ghost" id="edit">重新编辑</button>'}
         ${nextAct}
-        <button class="btn btn--ghost" id="back">返回名单列表</button>
+        <button class="btn btn--ghost" id="back">${isSingle ? '再填一份' : '返回名单列表'}</button>
       </div>
     </div>`;
   document.getElementById('dl').addEventListener('click', () => downloadSub(d.id));
   if (!isSingle) document.getElementById('edit').addEventListener('click', () => renderForm(d.roster_row_id, true));
-  document.getElementById('back').addEventListener('click', renderSlots);
+  document.getElementById('back').addEventListener('click', isSingle ? renderSingleForm : renderSlots);
   if (remaining.length && !isSingle) document.getElementById('next').addEventListener('click', renderSlots);
 }
 
