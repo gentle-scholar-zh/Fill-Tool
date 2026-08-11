@@ -35,3 +35,23 @@
 - 数据库用 SQLite（轻量、零额外服务）。若日后需要更高可靠性，可迁移到 Railway 的
   PostgreSQL，并把 `db.py` 的连接改为读取 `DATABASE_URL`；当前为保持功能完整先沿用 SQLite + 卷。
 - 分享/二维码里的访问地址会自动取请求域名；也可在管理端「设置」里手动填写站点地址。
+
+## 本地更新 → 自动部署 工作流
+Railway 连接 GitHub 仓库后，**推送即自动部署**：每次 push 到 `main`，Railway 会拉取最新代码、
+重装依赖、重启应用（约 1-3 分钟），无需手动操作。
+
+日常开发流程：
+1. 在本地照常写代码、改 bug、调试（本地服务 `http://127.0.0.1:5000`）。
+2. 改动完成后，用一键脚本提交并推送：
+   ```bash
+   bash deploy.sh "修复了填写页崩溃"
+   ```
+   脚本等价于：`git add -A && git commit -m "..." && git push origin main`。
+3. 推送后到 Railway 面板看部署进度；完成后刷新域名即可看到新版本。
+
+> 注意：本地仓库分支已统一为 `main`（远程默认分支也是 `main`）。Railway 连接仓库时
+> 选择部署分支为 `main`，这样 `git push origin main` 才会触发自动部署。
+
+## 已推送到 GitHub
+- 仓库：https://github.com/gentle-scholar-zh/Fill-Tool （默认分支 `main`）
+- 如需重新推送：`git push -u origin main`
