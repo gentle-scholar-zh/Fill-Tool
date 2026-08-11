@@ -7,15 +7,16 @@ set -e
 cd "$(dirname "$0")"
 
 MSG="${1:-更新}"
-if [ -z "$(git status --porcelain)" ]; then
-  echo "✅ 没有需要提交的改动，已是最新。"
-  exit 0
-fi
 
-echo "==> 暂存所有改动"
-git add -A
-echo "==> 提交: $MSG"
-git commit -m "$MSG"
+# 即使没有未提交改动，也尝试 push（解决 sandbox 网络抖动后待推送 commit 的情况）
+if [ -z "$(git status --porcelain)" ]; then
+  echo "✅ 工作区干净。仅尝试 push 已提交但未推送的内容。"
+else
+  echo "==> 暂存所有改动"
+  git add -A
+  echo "==> 提交: $MSG"
+  git commit -m "$MSG"
+fi
 echo "==> 推送到 origin/main (Railway 将自动部署)"
 git push origin main
 echo "✅ 已推送。请到 Railway 面板查看部署进度（通常 1-3 分钟完成）。"
