@@ -81,9 +81,12 @@ async function openLinkRosters(catId) {
   const modal = new Modal({
     title: '管理分组名单', width: 480, confirmText: '保存',
     content: `
-      <p class="muted">勾选要归入该分组的名单（取消勾选即移出）。</p>
+      <p class="muted">勾选要归入该分组的名单（取消勾选即移出）。每行右侧「关联模板」可将该名单绑定到填写模板——绑定后填写页会先校验学号/姓名，仅名单内人员可填写。</p>
       <div style="max-height:50vh;overflow:auto">
-        ${all.length ? all.map(r => `<label class="chk-row"><input type="checkbox" class="r-chk" value="${r.id}" ${inCat.includes(r.id) ? 'checked' : ''}> ${esc(r.name)}（${r.total}人）</label>`).join('')
+        ${all.length ? all.map(r => `<div class="roster-row">
+            <label class="chk-row" style="flex:1;margin:0"><input type="checkbox" class="r-chk" value="${r.id}" ${inCat.includes(r.id) ? 'checked' : ''}> ${esc(r.name)}（${r.total}人）</label>
+            <button class="btn btn--xs btn--ghost js-link" data-rid="${r.id}">关联模板</button>
+          </div>`).join('')
         : '<div class="muted">暂无名单，请先到「名单管理」上传</div>'}
       </div>`,
     onConfirm: async () => {
@@ -94,6 +97,37 @@ async function openLinkRosters(catId) {
       for (const rid of toRemove) await api.updateRoster(rid, { category_id: '' });
       toast('已更新名单分组', 'ok');
       load();
+    },
+  });
+  modal.render();
+  modal._el.querySelectorAll('.js-link').forEach(b =>
+    b.addEventListener('click', () => openLinkToTemplateInCat(b.dataset.rid, () => { modal.close(); load(); })));
+}
+
+async function openLinkToTemplateInCat(rosterId, after) {
+  const tRes = await api.getTemplates();
+  const templates = (tRes.data || []).filter(t => t.status === 'published');
+  if (!templates.length) { toast('暂无可关联的已发布模板', 'err'); return; }
+  const modal = new Modal({
+    title: '关联名单到模板', width: 480, confirmText: '关联',
+    content: `
+      <div class="field"><label>选择模板</label>
+        <select class="select" id="lk-tid">${templates.map(t => `<option value="${t.id}">${esc(t.name)}（${(t.fields || []).length} 字段）</option>`).join('')}</select></div>
+      <div class="row">
+        <div class="field"><label>学号字段</label><input class="input" id="lk-id" value="学号"></div>
+        <div class="field"><label>姓名字段</label><input class="input" id="lk-name" value="姓名"></div>
+      </div>
+      <p class="muted">关联后，模板填写页将先要求输入学号+姓名核验身份，仅名单内人员可填写；重复姓名会生成多个独立名额。字段名需与名单表头完全一致。</p>`,
+    onConfirm: async () => {
+      const tid = document.getElementById('lk-tid').value;
+      if (!tid) throw new Error('请选择模板');
+      const idf = document.getElementById('lk-id').value.trim();
+      const nmf = document.getElementById('lk-name').value.trim();
+      if (!idf || !nmf) throw new Error('请填写学号/姓名字段名');
+      await api.linkRoster(tid, rosterId, idf, nmf);
+      toast('已关联，填写页将校验身份', 'ok');
+      modal.close();
+      if (after) after();
     },
   });
   modal.render();

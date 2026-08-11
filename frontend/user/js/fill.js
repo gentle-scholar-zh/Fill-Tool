@@ -243,6 +243,7 @@ function renderSingleForm() {
   app.innerHTML = `
     <div class="card">
       <div class="head"><h1>🏅 ${esc(TMPL.name)}</h1><p>请填写以下表单</p></div>
+      <div class="verify-hint">ℹ️ 本模板未关联名单，无需身份校验，任何人都可直接填写。如需限定仅名单内人员填写，请到管理端「名单管理」将该名单关联到本模板。</div>
       <form id="form">${fieldsHtml}
         <div class="form-actions">
           <button type="submit" class="btn btn--primary">✓ 提交</button>
