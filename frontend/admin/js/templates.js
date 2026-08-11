@@ -367,11 +367,24 @@ async function openShareAndQr(id) {
 }
 
 // ============ 关联名单 ============
+// 根据已选名单动态加载 headers 作为奖项列候选。
+async function loadRosterHeaders(rid) {
+  if (!rid) return [];
+  try {
+    const r = await api.getRosterDetail(rid);
+    return (r.data && r.data.headers) || [];
+  } catch (_) { return []; }
+}
+
 async function openLinkRoster(id, current) {
   const rosters = await api.getRoster();
   const list = rosters.data || [];
+  const initialRid = (current && current.roster_id) || (list[0] && list[0].id) || '';
+  const initialHeaders = initialRid ? await loadRosterHeaders(initialRid) : [];
+  const initialAward = (current && current.award_field) || '';
+
   const modal = new Modal({
-    title: '关联名单', width: 480, confirmText: '关联',
+    title: '关联名单', width: 520, confirmText: '关联',
     content: `
       <div class="field"><label>选择名单</label>
         <select class="select" id="lk-rid">${list.map(r => `<option value="${r.id}" ${current && current.roster_id == r.id ? 'selected' : ''}>${esc(r.name)}（${r.total}人）</option>`).join('') || '<option value="">暂无名单</option>'}</select></div>
@@ -379,16 +392,33 @@ async function openLinkRoster(id, current) {
         <div class="field"><label>学号字段</label><input class="input" id="lk-id" value="${esc(current ? current.id_field : '学号')}"></div>
         <div class="field"><label>姓名字段</label><input class="input" id="lk-name" value="${esc(current ? current.name_field : '姓名')}"></div>
       </div>
-      <p class="muted">关联后，填写页将校验学号+姓名，未在名单中者无法提交；可在「提交记录」查看每位名单成员的填写进度。</p>`,
+      <div class="field"><label>奖项列 <span class="muted" style="font-weight:normal">— 用于多奖项展示卡片标题（如"一等奖学金"），不填则自动取该行非姓名/学号的第一个非空字段</span></label>
+        <select class="select" id="lk-award">
+          <option value="">— 自动选取 —</option>
+          ${initialHeaders.map(h => `<option value="${esc(h)}" ${initialAward === h ? 'selected' : ''}>${esc(h)}</option>`).join('')}
+        </select>
+      </div>
+      <p class="muted">关联后，填写页将校验学号+姓名，未在名单中者无法提交；可在「提交记录」查看每位名单成员的填写进度。同一人多奖项会按"奖项列"独立卡片填写。</p>`,
     onConfirm: async () => {
       const rid = document.getElementById('lk-rid').value;
       if (!rid) throw new Error('请先创建名单');
-      await api.linkRoster(id, rid, document.getElementById('lk-id').value.trim(), document.getElementById('lk-name').value.trim());
+      const idField = document.getElementById('lk-id').value.trim();
+      const nameField = document.getElementById('lk-name').value.trim();
+      const awardField = document.getElementById('lk-award').value;
+      await api.linkRoster(id, rid, idField, nameField, awardField);
       toast('已关联', 'ok');
       load();
     },
   });
   modal.render();
+
+  // 名单切换时重新加载奖项列候选
+  modal._el.querySelector('#lk-rid').addEventListener('change', async (e) => {
+    const headers = await loadRosterHeaders(e.target.value);
+    const sel = modal._el.querySelector('#lk-award');
+    sel.innerHTML = '<option value="">— 自动选取 —</option>' +
+      headers.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join('');
+  });
 }
 
 load();

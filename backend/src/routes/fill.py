@@ -48,6 +48,7 @@ def api_fill_data(tid):
                 'roster_total': roster['total'],
                 'id_field': link['id_field'],
                 'name_field': link['name_field'],
+                'award_field': link['award_field'] or '',
                 'require_verify': True,
             }
     return jsonify({'code': 0, 'data': {

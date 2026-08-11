@@ -17,6 +17,24 @@ function toast(msg, type = '') {
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 250); }, 2600);
 }
 
+// 从一个 slot(roster_data)提取奖项标题：
+//   1) 优先 ROSTER.award_field 显式指定的列；
+//   2) 否则扫描所有「非姓名/学号」字段的非空值（按列顺序取第一个）；
+//   3) 都为空则返空（调用方用 `名额 N` 兜底）。
+function pickAward(slot, roster) {
+  const d = (slot && slot.roster_data) || {};
+  const awardField = (roster && roster.award_field) || '';
+  if (awardField && String(d[awardField] || '').trim()) return String(d[awardField]).trim();
+  const idField = (roster && roster.id_field) || '学号';
+  const nameField = (roster && roster.name_field) || '姓名';
+  for (const k of Object.keys(d)) {
+    if (k === 'row_id' || k === idField || k === nameField) continue;
+    const v = String(d[k] || '').trim();
+    if (v) return v;
+  }
+  return '';
+}
+
 let TMPL = null;       // 模板数据
 let ROSTER = null;     // 关联名单信息
 let VERIFIED = null;   // 验证结果（含 slots）
@@ -95,7 +113,7 @@ function renderSlots() {
   const filled = slots.filter(s => s.submitted).length;
   const cards = slots.map((s, i) => {
     const d = s.roster_data || {};
-    const award = d['奖项'] || d['备注'] || d['说明'] || `名额 ${i + 1}`;
+    const award = pickAward(s, ROSTER) || `名额 ${i + 1}`;
     const status = s.submitted
       ? (s.edit_count > 0 ? `<span class="badge badge--ok">已提交 · 修改 ${s.edit_count} 次</span>` : '<span class="badge badge--ok">已提交</span>')
       : '<span class="badge">待填写</span>';
@@ -117,7 +135,7 @@ function renderSlots() {
         <p>已验证：${esc(VERIFIED.student_name)}（${esc(VERIFIED.student_id)}）· 进度 ${filled}/${slots.length}</p>
       </div>
       <div class="slots">${cards}</div>
-      <div class="muted" style="text-align:center;margin-top:14px">同一人多个奖项请分别填写，每份表单独立保存</div>
+      <div class="muted" style="text-align:center;margin-top:14px">同一学生多个奖项请分别填写，每份表单独立保存</div>
     </div>`;
 
   app.querySelectorAll('[data-act="fill"]').forEach(b =>
@@ -218,7 +236,7 @@ function renderForm(rowId, isEdit) {
   const prefill = isEdit && slot.data ? slot.data : (slot.roster_data || {});
   const fieldsHtml = renderFieldsHtml(TMPL.fields || [], prefill, isEdit);
 
-  const award = (slot.roster_data || {})['奖项'] || (slot.roster_data || {})['备注'] || '';
+  const award = pickAward(slot, ROSTER);
   app.innerHTML = `
     <div class="card">
       <div class="head"><h1>🏅 ${esc(TMPL.name)}</h1><p>${esc(award ? '奖项：' + award : '填写表单')}${isEdit ? ' · 修改已提交内容' : ''}</p></div>

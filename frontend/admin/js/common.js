@@ -38,8 +38,14 @@ export const api = {
   getTemplateQrcode: (id) => _fetch('/api/templates/' + id + '/qrcode'),
   getTemplateRoster: (id) => _fetch('/api/templates/' + id + '/roster'),
   getRosterProgress: (id) => _fetch('/api/templates/' + id + '/roster-progress'),
-  linkRoster: (tid, rid, idField, nameField) =>
-    _fetch('/api/templates/' + tid + '/link-roster', { method: 'POST', body: JSON.stringify({ roster_id: rid, id_field: idField, name_field: nameField }) }),
+  linkRoster: (tid, rid, idField, nameField, awardField) =>
+    _fetch('/api/templates/' + tid + '/link-roster', {
+      method: 'POST',
+      body: JSON.stringify({
+        roster_id: rid, id_field: idField, name_field: nameField,
+        award_field: awardField || '',
+      }),
+    }),
 
   getSubmissions: (tid) => _fetch('/api/submissions' + (tid ? '?template_id=' + tid : '')),
   createSubmission: (p) => _fetch('/api/submissions', { method: 'POST', body: JSON.stringify(p) }),

@@ -105,11 +105,12 @@ async function openLinkRosters(catId) {
 }
 
 async function openLinkToTemplateInCat(rosterId, after) {
-  const tRes = await api.getTemplates();
+  const [tRes, headersRes] = await Promise.all([api.getTemplates(), api.getRosterDetail(rosterId)]);
   const templates = (tRes.data || []).filter(t => t.status === 'published');
   if (!templates.length) { toast('暂无可关联的已发布模板', 'err'); return; }
+  const headers = (headersRes && headersRes.data && headersRes.data.headers) || [];
   const modal = new Modal({
-    title: '关联名单到模板', width: 480, confirmText: '关联',
+    title: '关联名单到模板', width: 520, confirmText: '关联',
     content: `
       <div class="field"><label>选择模板</label>
         <select class="select" id="lk-tid">${templates.map(t => `<option value="${t.id}">${esc(t.name)}（${(t.fields || []).length} 字段）</option>`).join('')}</select></div>
@@ -117,14 +118,21 @@ async function openLinkToTemplateInCat(rosterId, after) {
         <div class="field"><label>学号字段</label><input class="input" id="lk-id" value="学号"></div>
         <div class="field"><label>姓名字段</label><input class="input" id="lk-name" value="姓名"></div>
       </div>
+      <div class="field"><label>奖项列 <span class="muted" style="font-weight:normal">— 多奖项场景用于显示卡片标题（如"一等奖学金"），留空则自动取非姓名/学号的第一项</span></label>
+        <select class="select" id="lk-award">
+          <option value="">— 自动选取 —</option>
+          ${headers.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join('')}
+        </select>
+      </div>
       <p class="muted">关联后，模板填写页将先要求输入学号+姓名核验身份，仅名单内人员可填写；重复姓名会生成多个独立名额。字段名需与名单表头完全一致。</p>`,
     onConfirm: async () => {
       const tid = document.getElementById('lk-tid').value;
       if (!tid) throw new Error('请选择模板');
       const idf = document.getElementById('lk-id').value.trim();
       const nmf = document.getElementById('lk-name').value.trim();
+      const awardField = document.getElementById('lk-award').value;
       if (!idf || !nmf) throw new Error('请填写学号/姓名字段名');
-      await api.linkRoster(tid, rosterId, idf, nmf);
+      await api.linkRoster(tid, rosterId, idf, nmf, awardField);
       toast('已关联，填写页将校验身份', 'ok');
       modal.close();
       if (after) after();

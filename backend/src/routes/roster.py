@@ -169,6 +169,8 @@ def api_verify_roster():
     id_field = link['id_field']
     name_field = link['name_field']
 
+    award_field = link['award_field'] or ''
+
     # 该学生名下所有名额行（保留重复姓名 -> 多个名额）
     matched_rows = [r for r in rows
                     if str(r.get(id_field, '')).strip() == student_id
@@ -200,6 +202,7 @@ def api_verify_roster():
         'student_name': student_name,
         'id_field': id_field,
         'name_field': name_field,
+        'award_field': award_field,
         'slot_count': len(slots),
         'filled_count': filled,
         'slots': slots,

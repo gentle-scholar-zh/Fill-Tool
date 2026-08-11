@@ -160,6 +160,10 @@ def init_db():
         db.execute('ALTER TABLE submissions ADD COLUMN edit_count INTEGER DEFAULT 0')
     except Exception:
         pass
+    try:
+        db.execute('ALTER TABLE template_roster ADD COLUMN award_field TEXT')
+    except Exception:
+        pass
     db.commit()
     db.close()
 

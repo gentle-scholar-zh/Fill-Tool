@@ -249,11 +249,15 @@ def api_parse_template():
 
 @bp.route('/api/templates/<tid>/link-roster', methods=['POST'])
 def api_link_roster(tid):
-    """将名单关联到模板。"""
+    """将名单关联到模板。
+
+    支持：id_field / name_field / award_field（奖项列字段名，留空由前端自动 fallback）。
+    """
     data = request.get_json() or {}
     rid = data.get('roster_id')
-    id_field = data.get('id_field', '学号')
-    name_field = data.get('name_field', '姓名')
+    id_field = (data.get('id_field') or '学号').strip() or '学号'
+    name_field = (data.get('name_field') or '姓名').strip() or '姓名'
+    award_field = (data.get('award_field') or '').strip() or None
     if not rid:
         return jsonify({'code': 1, 'message': '缺少 roster_id'}), 400
     db = get_db()
@@ -263,12 +267,15 @@ def api_link_roster(tid):
     roster = db.execute('SELECT * FROM rosters WHERE id = ?', (rid,)).fetchone()
     if not roster:
         return jsonify({'code': 1, 'message': '名单不存在'}), 404
-    db.execute('''INSERT OR REPLACE INTO template_roster (template_id, roster_id, id_field, name_field, linked_at)
-                  VALUES (?, ?, ?, ?, ?)''', (tid, rid, id_field, name_field, now_str()))
+    db.execute('''INSERT OR REPLACE INTO template_roster
+                  (template_id, roster_id, id_field, name_field, award_field, linked_at)
+                  VALUES (?, ?, ?, ?, ?, ?)''',
+               (tid, rid, id_field, name_field, award_field, now_str()))
     db.commit()
     return jsonify({'code': 0, 'data': {
         'template_id': tid, 'roster_id': rid,
         'id_field': id_field, 'name_field': name_field,
+        'award_field': award_field or '',
         'roster_name': roster['name'], 'roster_total': roster['total'],
     }})
 
@@ -289,6 +296,7 @@ def api_get_template_roster(tid):
         'roster_total': roster['total'],
         'id_field': link['id_field'],
         'name_field': link['name_field'],
+        'award_field': link['award_field'] or '',
     }})
 
 
