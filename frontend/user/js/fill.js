@@ -171,7 +171,8 @@ function renderFieldsHtml(fields, prefill, isEdit) {
       return `<div class="field"><label>${esc(name)}${star}</label>${input}${hint}</div>`;
     }
     let input;
-    if (raw === 'select') {
+    // select 但没有任何选项时，降级为文本框，避免"必填下拉永远选不中"导致无法提交
+    if (raw === 'select' && opts.length > 0) {
       const optHtml = ['<option value="">请选择</option>']
         .concat(opts.map(o => `<option value="${esc(o)}" ${o === val ? 'selected' : ''}>${esc(o)}</option>`)).join('');
       input = `<select name="${esc(name)}" ${req}>${optHtml}</select>`;
