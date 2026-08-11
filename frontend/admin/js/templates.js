@@ -322,19 +322,29 @@ function fileToBase64(file) {
 
 // ============ 分享 + 二维码（合并弹窗） ============
 async function openShareAndQr(id) {
-  const [qc, rinfo] = await Promise.all([api.getTemplateQrcode(id), api.getTemplateRoster(id)]);
-  const d = qc.data;
+  // 强制用"用户当前访问的域名"作为 base，覆盖后端拼出的任何地址。
+  // 详情：见后端 get_fill_base_url() 与 ?base= 参数；这里前端再兜底一层。
+  const frontendBase = (window.location.origin || '').replace(/\/$/, '');
+  const qrUrl = frontendBase
+    ? `/api/templates/${id}/qrcode?base=${encodeURIComponent(frontendBase)}`
+    : `/api/templates/${id}/qrcode`;
+  const [qc, rinfo] = await Promise.all([
+    fetch(qrUrl).then(r => r.json()),
+    api.getTemplateRoster(id),
+  ]);
+  const d = qc.data || {};
   const linked = rinfo.data;
+  const safeUrl = frontendBase ? `${frontendBase}/fill/${id}` : (d.url || '');
   const modal = new Modal({
     title: '分享与二维码', width: 520, showClose: true, confirmText: '关闭', onConfirm: null,
     content: `
       <div class="share-grid">
         <div class="share-left">
           <div class="field"><label>填写页地址</label>
-            <div class="copy-box"><input class="input" id="share-url" value="${esc(d.url || '')}" readonly>
+            <div class="copy-box"><input class="input" id="share-url" value="${esc(safeUrl)}" readonly>
               <button class="btn btn--sm" id="btn-copy">复制</button></div></div>
           <div class="field"><label>短链 ID</label>
-            <input class="input" value="${esc((d.url || '').split('/fill/')[1] || '')}" readonly></div>
+            <input class="input" value="${esc(id)}" readonly></div>
           ${linked ? `<div class="badge badge--ok">已关联名单：${esc(linked.roster_name)}（${linked.roster_total} 人）</div>`
                    : '<div class="muted">未关联名单，开放填写时无法校验身份</div>'}
           <button class="btn btn--primary mt" id="btn-link" style="width:100%">${linked ? '重新关联名单' : '关联名单'}</button>
@@ -351,7 +361,7 @@ async function openShareAndQr(id) {
     openLinkRoster(id, linked);
   });
   modal._el.querySelector('#btn-copy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(d.url); toast('已复制', 'ok'); }
+    try { await navigator.clipboard.writeText(safeUrl); toast('已复制', 'ok'); }
     catch (_) { toast('复制失败，请手动选择', 'err'); }
   });
 }

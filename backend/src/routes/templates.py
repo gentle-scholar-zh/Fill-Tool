@@ -161,13 +161,19 @@ def api_publish_template(tid):
 
 @bp.route('/api/templates/<tid>/qrcode', methods=['GET'])
 def api_template_qrcode(tid):
-    """生成模板填写页二维码（微信扫码）。"""
+    """生成模板填写页二维码（微信扫码）。
+
+    支持 ?base=… 覆盖 base URL（前端 `window.location.origin`）。
+    不传时回退到 get_fill_base_url()（自动适配站点设置/请求 host）。
+    """
     db = get_db()
     tpl = db.execute('SELECT * FROM templates WHERE id = ?', (tid,)).fetchone()
     if not tpl:
         return jsonify({'code': 1, 'message': '模板不存在'}), 404
 
-    base_url = get_fill_base_url()
+    base_url = (request.args.get('base') or '').strip().rstrip('/')
+    if not base_url:
+        base_url = get_fill_base_url()
     fill_url = f'{base_url}/fill/{tid}'
 
     import qrcode
