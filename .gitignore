@@ -1,0 +1,25 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---- 项目数据（SQLite 库 + 上传的 docx/名单/提交文件），不进入 git ----
+backend/data/
+
+# ---- 旧版备份（体积大，且已并入当前代码）----
+_backup_20260811/
+
+# ---- 系统 / 编辑器 ----
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+
+# ---- 浏览器测试缓存（puppeteer 残留，体积大，无关业务）----
+.chrome_tmp/
+
+# ---- 本地工作记忆（不进入仓库）----
+.workbuddy/
