@@ -9,6 +9,9 @@
 import os
 import sys
 
+# 部署标记：每次需强制 Railway 重新构建时递增。不参与任何运行时逻辑。
+__deploy_rev__ = "2026-08-12-retry-redeploy"
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
