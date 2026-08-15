@@ -64,16 +64,18 @@ def _public_user(u):
 
 @bp.route('/api/auth/register', methods=['POST'])
 def api_register():
-    """用户自助注册。
+    """用户自助注册（公共接口，仅允许注册学生）。
 
-    字段：role / name / email / phone / class_name / student_id / password / confirm_password
-    - 学生必须填学号；教师/管理员学号选填
+    字段：name / email / phone / class_name / student_id / password / confirm_password
+    - 学生必须填学号
     - 手机号、邮箱不可与已有用户重复
+    - **公共注册一律强制为 student 角色**，即使客户端伪造 role 字段也会被服务端覆盖。
+      教师 / 管理员 / 超级管理员账号只能由超级管理员在后台「用户管理」创建，
+      或通过 `bootstrap_admin.py` CLI 脚本初始化。
     """
     data = request.get_json() or {}
-    role = data.get('role') or 'student'
-    if role not in ROLES:
-        role = 'student'
+    # 公共注册硬编码为学生；忽略客户端传入的 role 字段
+    role = 'student'
     name = (data.get('name') or '').strip()
     email = (data.get('email') or '').strip()
     phone = (data.get('phone') or '').strip()
@@ -86,7 +88,7 @@ def api_register():
         return jsonify({'code': 1, 'message': '姓名不能为空'}), 400
     if not phone and not email:
         return jsonify({'code': 1, 'message': '手机号或邮箱至少填写一项'}), 400
-    if role == 'student' and not student_id:
+    if not student_id:
         return jsonify({'code': 1, 'message': '学生必须填写学号'}), 400
     if len(password) < 6:
         return jsonify({'code': 1, 'message': '密码至少 6 位'}), 400
@@ -101,8 +103,8 @@ def api_register():
 
     uid = gen_id()
     username = phone or email  # 兼容旧表 username 唯一约束
-    db.execute('''INSERT INTO users (id, name, username, role, email, phone, class_name, student_id, password_hash, status, created_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+    db.execute('''INSERT INTO users (id, name, username, role, email, phone, class_name, student_id, password_hash, status, is_super, created_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)''',
                (uid, name, username, role, email, phone, class_name, student_id,
                 generate_password_hash(password), 'active', now_str()))
     db.commit()
@@ -157,3 +159,28 @@ def api_check():
     if pu:
         pu['home'] = ROLE_HOME.get(pu['role'], '/user/pool.html')
     return jsonify({'code': 0, 'logged_in': bool(u), 'data': pu})
+
+
+@bp.route('/api/auth/password', methods=['PUT'])
+def api_change_password():
+    """已登录用户自助修改自己的密码：old_password + new_password。
+    若忘记原密码，须联系管理员 / 超级管理员通过 /api/users/<uid>/password 重置。
+    """
+    u = get_current_user()
+    if not u:
+        return jsonify({'code': 401, 'message': '请先登录'}), 401
+    data = request.get_json() or {}
+    old_pwd = data.get('old_password') or ''
+    new_pwd = data.get('new_password') or ''
+    if not old_pwd or not new_pwd:
+        return jsonify({'code': 1, 'message': '请输入原密码和新密码'}), 400
+    if len(new_pwd) < 6:
+        return jsonify({'code': 1, 'message': '新密码至少 6 位'}), 400
+    db = get_db()
+    row = db.execute('SELECT * FROM users WHERE id = ?', (u['id'],)).fetchone()
+    if not row or not check_password_hash(row['password_hash'] or '', old_pwd):
+        return jsonify({'code': 1, 'message': '原密码错误'}), 400
+    db.execute('UPDATE users SET password_hash = ? WHERE id = ?',
+               (generate_password_hash(new_pwd), u['id']))
+    db.commit()
+    return jsonify({'code': 0, 'data': True})

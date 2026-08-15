@@ -181,11 +181,26 @@ def init_db():
         ('templates', 'ALTER TABLE templates ADD COLUMN is_public INTEGER DEFAULT 0'),
         ('templates', 'ALTER TABLE templates ADD COLUMN owner_id TEXT'),
         ('submissions', 'ALTER TABLE submissions ADD COLUMN user_id TEXT'),
+        ('users', 'ALTER TABLE users ADD COLUMN is_super INTEGER DEFAULT 0'),
     ]:
         try:
             db.execute(sql)
         except Exception:
             pass
+    # ---- PRD V2.1：自动把历史最老的 admin 升为超级管理员（幂等） ----
+    try:
+        existing = db.execute('SELECT id FROM users WHERE is_super = 1 LIMIT 1').fetchone()
+        if not existing:
+            # 没有现役超级管理员 → 找最老的 admin 提升（init_db 用的是裸连接，
+            # fetchone() 返回的是 tuple 而非 sqlite3.Row，故用索引取 id）
+            row = db.execute(
+                "SELECT id FROM users WHERE role = 'admin' ORDER BY created_at ASC, rowid ASC LIMIT 1"
+            ).fetchone()
+            if row:
+                admin_id = row[0] if not isinstance(row, dict) else row['id']
+                db.execute('UPDATE users SET is_super = 1 WHERE id = ?', (admin_id,))
+    except Exception:
+        pass
     db.commit()
     db.close()
 
