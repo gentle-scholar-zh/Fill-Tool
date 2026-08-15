@@ -7,41 +7,12 @@ const tplSelect = document.getElementById('tplSelect');
 const banner = document.getElementById('banner');
 const formArea = document.getElementById('formArea');
 const btnCenter = document.getElementById('btnCenter');
-const btnCopy = document.getElementById('btnCopy');
-const btnQr = document.getElementById('btnQr');
-const qrBox = document.getElementById('qrBox');
 
-if (me) btnCenter.style.display = '';
-else btnCenter.textContent = '登录';
-btnCenter.addEventListener('click', () => { window.location.href = me ? '/user/center.html' : '/user/login.html'; });
-
-// 复制本页链接
-btnCopy.addEventListener('click', async () => {
-  const url = location.origin + '/user/pool.html';
-  try {
-    await navigator.clipboard.writeText(url);
-    toast('本页链接已复制', 'ok');
-  } catch (_) {
-    // 降级：选中文本
-    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy'); ta.remove();
-    toast('本页链接已复制', 'ok');
-  }
-});
-
-// 二维码（公开池入口）
-btnQr.addEventListener('click', async () => {
-  if (qrBox.style.display !== 'none') { qrBox.style.display = 'none'; return; }
-  const url = location.origin + '/user/pool.html';
-  qrBox.innerHTML = '<div class="qr-cap">生成中…</div>';
-  qrBox.style.display = 'block';
-  try {
-    const r = await api.createQrCode(url);
-    qrBox.innerHTML = `<img src="data:image/png;base64,${r.data.image}" alt="二维码"><div class="qr-cap">扫码打开公开模板池</div>`;
-  } catch (e) {
-    qrBox.innerHTML = '<div class="qr-cap">二维码生成失败</div>';
-  }
-});
+if (btnCenter) {
+  btnCenter.addEventListener('click', () => {
+    window.location.href = me ? '/user/center.html' : '/user/login.html';
+  });
+}
 
 let state = {
   tid: '',
@@ -49,9 +20,6 @@ let state = {
   editingSid: null,   // 正在修改的提交 id
   existing: null,     // 已存在的提交（mine / sessionStorage）
 };
-
-if (me) btnCenter.style.display = '';
-btnCenter.addEventListener('click', () => { window.location.href = '/user/center.html'; });
 
 // 免登录模式下，用 sessionStorage 记录本浏览器已提交的 submission id，支持后续修改
 function anonSidKey(tid) { return 'pool_sid_' + tid; }

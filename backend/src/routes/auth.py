@@ -7,6 +7,7 @@
 登录模式下填写提交时由后端从 session 取 user_id 绑定到 submission。
 """
 import functools
+import json
 
 from flask import Blueprint, request, jsonify, session
 
@@ -184,6 +185,48 @@ def api_change_password():
                (generate_password_hash(new_pwd), u['id']))
     db.commit()
     return jsonify({'code': 0, 'data': True})
+
+
+@bp.route('/api/auth/password-request', methods=['POST'])
+def api_password_request():
+    """用户忘记密码：提交改密申请（公开接口，无需登录）。
+
+    流程：用户填账号 + 想要的新密码（选填）→ 落一条 type='password_request' 的通知
+    → 管理员在「通知」中心看到并点击「批准重置」→ 新密码写入该用户账户。
+    若用户未填新密码，则生成一个临时密码，待批准后生效（管理员可在通知中查看）。
+    """
+    import secrets
+    data = request.get_json() or {}
+    ident = (data.get('ident') or '').strip()
+    new_pwd = (data.get('new_password') or '').strip()
+    note = (data.get('note') or '').strip()
+    if not ident:
+        return jsonify({'code': 1, 'message': '请输入账号（手机号或邮箱）'}), 400
+    if new_pwd and len(new_pwd) < 6:
+        return jsonify({'code': 1, 'message': '新密码至少 6 位'}), 400
+
+    db = get_db()
+    row = db.execute('SELECT * FROM users WHERE phone = ? OR email = ?',
+                     (ident, ident)).fetchone()
+    if not row:
+        return jsonify({'code': 1, 'message': '未找到该账号，请检查手机号或邮箱'}), 404
+    user = row_to_dict(row)
+    if user.get('status') == 'disabled':
+        return jsonify({'code': 1, 'message': '该账号已被禁用，请联系管理员'}), 403
+
+    # 未提供新密码则生成一个临时密码，待管理员批准后生效
+    if not new_pwd:
+        new_pwd = secrets.token_urlsafe(8)
+    payload = json.dumps({'uid': user['id'], 'new_password': new_pwd, 'note': note},
+                         ensure_ascii=False)
+    db.execute('''INSERT INTO notifications (id, title, body, type, icon, payload, status, created_at)
+                  VALUES (?, ?, ?, 'password_request', 'lock', ?, 'open', ?)''',
+               (gen_id(), '用户申请修改密码',
+                f"{user['name']}（{ident}）申请重置密码" + (f"：{note}" if note else ''),
+                payload, now_str()))
+    db.commit()
+    return jsonify({'code': 0,
+                    'message': '申请已提交，请等待管理员处理；处理后将以站内通知告知新密码'})
 
 
 # ============================================================================

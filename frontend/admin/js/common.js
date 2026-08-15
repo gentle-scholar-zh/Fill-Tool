@@ -166,6 +166,9 @@ export const api = {
   getUsers: () => _fetch('/api/users'),
   createUser: (d) => _fetch('/api/users', { method: 'POST', body: JSON.stringify(d) }),
   updateUser: (id, d) => _fetch('/api/users/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+  resetPassword: (id, d) => _fetch('/api/users/' + id + '/password', { method: 'PUT', body: JSON.stringify(d || {}) }),
+  requestPasswordReset: (d) => _fetch('/api/auth/password-request', { method: 'POST', body: JSON.stringify(d) }),
+  resolvePasswordRequest: (nid) => _fetch('/api/notifications/' + nid + '/resolve-password', { method: 'POST' }),
 
   getNotifications: () => _fetch('/api/notifications'),
   markRead: (id) => _fetch('/api/notifications/' + id + '/read', { method: 'PUT' }),
@@ -348,6 +351,7 @@ const NAV = [
   { key: 'notifications', label: '通知', icon: 'notifications', href: 'notifications.html', roles: ['admin', 'teacher'] },
   { key: 'recycle', label: '回收站', icon: 'recycle', href: 'recycle.html', roles: ['admin'] },
   { key: 'settings', label: '设置', icon: 'settings', href: 'settings.html', roles: ['admin', 'teacher'] },
+  { key: 'public-pool', label: '公开模板池', icon: 'share', href: '/user/pool.html', target: '_blank', roles: ['admin', 'teacher'] },
 ];
 
 export function initShell(active) {
@@ -371,7 +375,7 @@ export function initShell(active) {
     sidebar.innerHTML = `
       <div class="brand">填表管理系统</div>
       <nav class="nav">
-        ${NAV.filter(n => n.roles.includes(role)).map(n => `<a href="${n.href}" class="${n.key === active ? 'active' : ''}">${icon(n.icon, 18)}<span>${n.label}</span></a>`).join('')}
+        ${NAV.filter(n => n.roles.includes(role)).map(n => `<a href="${n.href}"${n.target ? ` target="${n.target}" rel="noopener"` : ''} class="${n.key === active ? 'active' : ''}">${icon(n.icon, 18)}<span>${n.label}</span></a>`).join('')}
       </nav>
       <div class="foot">本地服务 · 端口 5000</div>`;
   }

@@ -2,6 +2,7 @@
 """数据库层：连接管理、表结构初始化、通用工具。"""
 import sqlite3
 import uuid
+import json
 
 from flask import g
 from .config import DB_PATH, now_str
@@ -199,6 +200,34 @@ def init_db():
             if row:
                 admin_id = row[0] if not isinstance(row, dict) else row['id']
                 db.execute('UPDATE users SET is_super = 1 WHERE id = ?', (admin_id,))
+    except Exception:
+        pass
+    # ---- PRD V2.1 P2：密码申请通知扩展列（幂等） ----
+    for sql in [
+        "ALTER TABLE notifications ADD COLUMN payload TEXT DEFAULT '{}'",
+        "ALTER TABLE notifications ADD COLUMN status TEXT DEFAULT 'open'",
+    ]:
+        try:
+            db.execute(sql)
+        except Exception:
+            pass
+    # ---- PRD V2.1：首次启动写入真实更新日志（仅当为空） ----
+    try:
+        if not db.execute('SELECT 1 FROM changelog').fetchone():
+            db.execute(
+                'INSERT INTO changelog (id, version, date, content_json, created_at) VALUES (?,?,?,?,?)',
+                ('v21', 'V2.1.0', '2026-08-16',
+                 json.dumps([
+                    '用户体系：自助注册仅限学生；教师 / 管理员仅由超级管理员在后台创建',
+                    '密码安全：支持登录后自助改密；后台可一键重置任意用户密码；登录页「忘记密码」可申请，管理员在通知中心批准后生效',
+                    '账号管理：后台支持启用 / 禁用用户',
+                    '数据持久化：部署可挂载数据卷（Railway Volume + DATA_DIR），重启不再丢失数据',
+                    '公开模板池：后台新增「公开模板池」入口；公共池页面提供「我的」一键进入个人中心',
+                    '界面升级：全站改用黑白线条图标，重设计后台 / 用户端，空状态统一为单行样式',
+                    '角色选择：新建 / 编辑用户按「前台用户 / 后台用户」分组',
+                 ], ensure_ascii=False),
+                 now_str())
+            )
     except Exception:
         pass
     db.commit()

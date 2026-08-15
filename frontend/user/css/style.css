@@ -2,7 +2,7 @@
    保留在用类名：card/field/req/hint/input/select/textarea/btn/btn--ghost/
    verify-box/verify-hint/toast/slots/slot-card/badge/form-actions/success-actions/
    combo/closed-ico/ptoolbar/pool-empty/banner/changelog/center-list/center-item
-   新增：.ico 线条图标 / .icon-btn 图标按钮 / .btn-back 返回 / .hero 公开池门户
+   新增：.ico 线条图标 / .icon-btn 图标按钮 / .btn-back 返回 / .hero 公开池门户 / .hero-row 标题行
 */
 :root {
   --bg: #f6f6f7;
@@ -150,7 +150,9 @@ textarea { resize: vertical; min-height: 92px; }
 /* ===== 公共模板池（门户） ===== */
 .hero { text-align: center; margin-bottom: 18px; }
 .hero .mark { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1.5px solid var(--ink); border-radius: 13px; color: var(--ink); margin-bottom: 12px; }
-.hero h1 { font-size: 22px; font-weight: 680; letter-spacing: .3px; }
+.hero h1 { font-size: 22px; font-weight: 680; letter-spacing: .3px; margin: 0; }
+.hero-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 6px; }
+.btn--xs { padding: 5px 12px; font-size: 12.5px; border-radius: 9px; }
 .hero p { font-size: 13.5px; color: var(--ink-3); margin-top: 7px; }
 .ptoolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
 .ptoolbar select { flex: 1; }
@@ -161,14 +163,6 @@ textarea { resize: vertical; min-height: 92px; }
   display: flex; align-items: center; justify-content: space-between; gap: 10px; line-height: 1.45;
 }
 .banner .btn { width: auto; margin: 0; padding: 7px 14px; font-size: 13px; }
-
-/* 复制链接 / 二维码入口 */
-.share-row { display: flex; gap: 8px; margin-top: 14px; }
-.share-row .btn { margin: 0; }
-.share-row .btn--ghost { flex: 1; }
-.qr-box { margin-top: 14px; text-align: center; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; background: #fafafa; }
-.qr-box img { width: 150px; height: 150px; }
-.qr-box .qr-cap { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
 
 /* ===== 更新日志折叠 ===== */
 .changelog { margin-top: 22px; }
