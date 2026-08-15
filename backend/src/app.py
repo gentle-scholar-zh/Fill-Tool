@@ -36,11 +36,16 @@ def create_app() -> Flask:
 
     @app.after_request
     def _no_cache_frontend(resp):
-        """前端页面/静态资源（HTML/JS/CSS）禁止被 Cloudflare 边缘或浏览器长期缓存，
-        否则每次部署后要等数小时才生效。API 响应保持默认（按业务自行控制）。"""
+        """前端页面/静态资源（HTML/JS/CSS）与关键只读 API（fill/templates/submissions/roster 等）
+        禁止被 Cloudflare 边缘或浏览器长期缓存，否则部署后旧代码/旧数据要等数小时才生效，
+        用户还会遇到『改了模板填写页还是旧的』这类诡异现象。"""
         path = request.path
-        if (path.startswith('/admin') or path.startswith('/user')
-                or path.startswith('/fill') or path in ('/', '/admin/', '/user/')):
+        is_frontend = (path.startswith('/admin') or path.startswith('/user')
+                       or path.startswith('/fill') or path in ('/', '/admin/', '/user/'))
+        # 只读 API：GET 且不是生成型（qrcode 图片允许缓存，其余 JSON 一律 no-cache）
+        is_read_api = (request.method == 'GET' and path.startswith('/api/')
+                       and not path.endswith('/qrcode'))
+        if is_frontend or is_read_api:
             resp.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             resp.headers['Pragma'] = 'no-cache'
             resp.headers['Expires'] = '0'
