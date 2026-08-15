@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify
 
 from ..config import get_lan_ip, get_fill_base_url
 from ..db import get_db, now_str
+from .auth import login_required
 
 bp = Blueprint('settings', __name__)
 
@@ -16,6 +17,7 @@ def api_get_settings():
 
 
 @bp.route('/api/settings', methods=['PUT'])
+@login_required(roles=('admin',))
 def api_update_settings():
     data = request.get_json() or {}
     db = get_db()
@@ -49,6 +51,7 @@ def api_get_site_url():
 
 
 @bp.route('/api/settings/site-url', methods=['PUT'])
+@login_required(roles=('admin',))
 def api_set_site_url():
     """设置站点公开访问地址。"""
     data = request.get_json() or {}
@@ -98,6 +101,7 @@ def api_debug_url():
 
 
 @bp.route('/api/settings/retention', methods=['PUT'])
+@login_required(roles=('admin',))
 def api_update_retention():
     data = request.get_json() or {}
     days = data.get('days', 30)

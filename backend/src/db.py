@@ -136,6 +136,14 @@ def init_db():
         created_at  TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS changelog (
+        id          TEXT PRIMARY KEY,
+        version     TEXT NOT NULL,
+        date        TEXT NOT NULL,
+        content_json TEXT NOT NULL,
+        created_at  TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_submissions_template ON submissions(template_id);
     CREATE INDEX IF NOT EXISTS idx_recycle_expire ON recycle(expire_at);
     CREATE INDEX IF NOT EXISTS idx_template_roster ON template_roster(template_id);
@@ -164,6 +172,20 @@ def init_db():
         db.execute('ALTER TABLE template_roster ADD COLUMN award_field TEXT')
     except Exception:
         pass
+    # ---- PRD V2.0 扩展列（幂等） ----
+    for col, sql in [
+        ('users', 'ALTER TABLE users ADD COLUMN password_hash TEXT'),
+        ('users', 'ALTER TABLE users ADD COLUMN phone TEXT'),
+        ('users', 'ALTER TABLE users ADD COLUMN class_name TEXT'),
+        ('users', 'ALTER TABLE users ADD COLUMN student_id TEXT'),
+        ('templates', 'ALTER TABLE templates ADD COLUMN is_public INTEGER DEFAULT 0'),
+        ('templates', 'ALTER TABLE templates ADD COLUMN owner_id TEXT'),
+        ('submissions', 'ALTER TABLE submissions ADD COLUMN user_id TEXT'),
+    ]:
+        try:
+            db.execute(sql)
+        except Exception:
+            pass
     db.commit()
     db.close()
 

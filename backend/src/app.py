@@ -2,7 +2,7 @@
 """应用工厂：创建 Flask 应用、配置 CORS、注册路由与数据库钩子。"""
 import os
 
-from flask import Flask, request, Response
+from flask import Flask, request, Response, g, session
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -52,6 +52,13 @@ def create_app() -> Flask:
         return resp
 
     register_routes(app)
+
+    # 每个请求把当前登录用户注入 g.current_user（无登录态则为 None），
+    # 供各接口做角色权限校验（login_required 装饰器内部同样从 session 取）。
+    from .routes.auth import get_current_user
+    @app.before_request
+    def _inject_current_user():
+        g.current_user = get_current_user()
 
     # 微信公众号「业务域名」校验文件：微信后台要求根路径可访问特定文件以证明域名所有权。
     # 注意：业务域名验证仅去除网页底部"此网页由 xxx 提供"灰条，不解决微信对动态DNS域名的风控拦截。

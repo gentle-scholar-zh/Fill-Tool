@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录 - 填表平台</title>
+<link rel="stylesheet" href="/user/css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-brand">✍️ 填表平台</div>
+    <h2>登录</h2>
+    <form id="loginForm" class="auth-form" novalidate>
+      <div class="field">
+        <label>手机号或邮箱</label>
+        <input class="input" id="ident" placeholder="请输入注册时的手机号 / 邮箱" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input class="input" id="pwd" type="password" placeholder="请输入密码" autocomplete="current-password" required>
+      </div>
+      <button class="btn btn--primary" id="submitBtn" type="submit">登 录</button>
+      <div class="auth-foot">还没有账号？<a href="/user/register.html">立即注册</a></div>
+    </form>
+  </div>
+  <div id="changelog"></div>
+</div>
+<script type="module" src="/user/js/login.js"></script>
+</body>
+</html>

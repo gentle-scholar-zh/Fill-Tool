@@ -52,6 +52,17 @@ async function load() {
             </div>
           </div>
         </div>
+        <div class="card">
+          <div class="card-head"><h2>公共填写访问控制</h2></div>
+          <div class="card-body">
+            <p class="muted mb">开启后，访客必须登录才能进入公共模板池填写；关闭则任何人可直接填写（免登录）。</p>
+            <label class="switch-cell">
+              <span class="switch"><input type="checkbox" id="pub-login" ${settings.public_require_login === '1' ? 'checked' : ''}><span class="slider"></span></span>
+              <span class="lbl">公开模板需要登录后才能填写</span>
+            </label>
+            <div class="mt"><button class="btn btn--primary" id="btn-save-pub">保存</button></div>
+          </div>
+        </div>
       </div>
       <div class="card mt">
         <div class="card-head"><h2>系统信息</h2></div>
@@ -71,6 +82,11 @@ async function load() {
     content.querySelector('#btn-save-ret').addEventListener('click', async () => {
       const days = +document.getElementById('retention').value || 30;
       await api.updateRetention(days);
+      toast('已保存', 'ok');
+    });
+    content.querySelector('#btn-save-pub').addEventListener('click', async () => {
+      const on = document.getElementById('pub-login').checked ? '1' : '0';
+      await api._fetch('/api/settings', { method: 'PUT', body: JSON.stringify({ public_require_login: on }) });
       toast('已保存', 'ok');
     });
   } catch (e) {

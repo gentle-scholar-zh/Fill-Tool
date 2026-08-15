@@ -5,11 +5,13 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 
 from ..db import get_db
+from .auth import login_required
 
 bp = Blueprint('recycle', __name__)
 
 
 @bp.route('/api/recycle', methods=['GET'])
+@login_required(roles=('admin',))
 def api_list_recycle():
     db = get_db()
     rows = db.execute('SELECT * FROM recycle ORDER BY deleted_at DESC').fetchall()
@@ -26,6 +28,7 @@ def api_list_recycle():
 
 
 @bp.route('/api/recycle/<rid>/restore', methods=['POST'])
+@login_required(roles=('admin',))
 def api_restore_recycle(rid):
     db = get_db()
     item = db.execute('SELECT * FROM recycle WHERE id = ?', (rid,)).fetchone()
@@ -39,6 +42,7 @@ def api_restore_recycle(rid):
 
 
 @bp.route('/api/recycle/restore-all', methods=['POST'])
+@login_required(roles=('admin',))
 def api_restore_all_recycle():
     db = get_db()
     items = db.execute('SELECT * FROM recycle').fetchall()
@@ -51,6 +55,7 @@ def api_restore_all_recycle():
 
 
 @bp.route('/api/recycle/<rid>', methods=['DELETE'])
+@login_required(roles=('admin',))
 def api_permanent_delete_recycle(rid):
     db = get_db()
     item = db.execute('SELECT * FROM recycle WHERE id = ?', (rid,)).fetchone()
@@ -64,6 +69,7 @@ def api_permanent_delete_recycle(rid):
 
 
 @bp.route('/api/recycle', methods=['DELETE'])
+@login_required(roles=('admin',))
 def api_empty_recycle():
     db = get_db()
     items = db.execute('SELECT * FROM recycle').fetchall()

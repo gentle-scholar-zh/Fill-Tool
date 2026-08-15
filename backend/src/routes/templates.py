@@ -6,25 +6,58 @@ import base64
 from io import BytesIO
 from datetime import datetime, timedelta
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, g
 from docx import Document
 
 from ..config import TPL_DIR, get_fill_base_url, _is_private_host
 from ..db import get_db, gen_id, now_str
 from ..utils import (infer_type, docx_to_type, extract_placeholders,
                      extract_placeholders_xlsx, safe_filename, tpl_to_dict)
+from .auth import login_required
 
 bp = Blueprint('templates', __name__)
+
+
+def _can_manage(row):
+    """admin 全权；teacher 仅可管理自己创建的模板（owner_id 为空视为可管理，兼容历史数据）。"""
+    u = getattr(g, 'current_user', None)
+    if not u:
+        return False
+    if u['role'] == 'admin':
+        return True
+    if u['role'] == 'teacher' and (not row['owner_id'] or row['owner_id'] == u['id']):
+        return True
+    return False
 
 
 @bp.route('/api/templates', methods=['GET'])
 def api_list_templates():
     db = get_db()
-    rows = db.execute('SELECT * FROM templates WHERE deleted = 0 ORDER BY updated_at DESC').fetchall()
+    cat = (request.args.get('category') or '').strip()
+    if cat:
+        rows = db.execute('SELECT * FROM templates WHERE deleted = 0 AND category = ? ORDER BY updated_at DESC',
+                          (cat,)).fetchall()
+    else:
+        rows = db.execute('SELECT * FROM templates WHERE deleted = 0 ORDER BY updated_at DESC').fetchall()
+    return jsonify({'code': 0, 'data': [tpl_to_dict(r) for r in rows]})
+
+
+@bp.route('/api/templates/public', methods=['GET'])
+def api_public_templates():
+    """公共模板池数据源：已发布 + 公开 + 未关联指定名单的模板。
+
+    指定名单模板（在 template_roster 中有记录）不进入公共池，需专属链接访问。
+    """
+    db = get_db()
+    rows = db.execute('''SELECT * FROM templates
+                         WHERE deleted = 0 AND status = 'published' AND is_public = 1
+                           AND id NOT IN (SELECT template_id FROM template_roster)
+                         ORDER BY updated_at DESC''').fetchall()
     return jsonify({'code': 0, 'data': [tpl_to_dict(r) for r in rows]})
 
 
 @bp.route('/api/templates', methods=['POST'])
+@login_required(roles=('admin', 'teacher'))
 def api_create_template():
     """通过已解析的字段创建模板（前端已完成 docx 解析）。"""
     data = request.get_json() or {}
@@ -54,12 +87,13 @@ def api_create_template():
         except Exception as e:
             return jsonify({'code': 1, 'message': f'占位文件创建失败: {e}'}), 500
 
+    owner_id = g.current_user['id'] if getattr(g, 'current_user', None) else None
     db = get_db()
-    db.execute('''INSERT INTO templates (id, name, category, file_name, file_path, fields_json, status, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+    db.execute('''INSERT INTO templates (id, name, category, file_name, file_path, fields_json, status, is_public, owner_id, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                (tpl_id, name, data.get('category', '未分类'), file_name, file_path,
                 json.dumps(fields, ensure_ascii=False), data.get('status', 'draft'),
-                now_str(), now_str()))
+                int(bool(data.get('is_public', 0))), owner_id, now_str(), now_str()))
     db.commit()
     row = db.execute('SELECT * FROM templates WHERE id = ?', (tpl_id,)).fetchone()
     return jsonify({'code': 0, 'data': tpl_to_dict(row)})
@@ -75,12 +109,15 @@ def api_get_template(tid):
 
 
 @bp.route('/api/templates/<tid>', methods=['PUT'])
+@login_required(roles=('admin', 'teacher'))
 def api_update_template(tid):
     data = request.get_json() or {}
     db = get_db()
     row = db.execute('SELECT * FROM templates WHERE id = ?', (tid,)).fetchone()
     if not row:
         return jsonify({'code': 1, 'message': '模板不存在'}), 404
+    if not _can_manage(row):
+        return jsonify({'code': 403, 'message': '无权限：仅管理员或模板创建者可修改'}), 403
     fields = data.get('fields')
     name = data.get('name')
     category = data.get('category')
@@ -105,22 +142,27 @@ def api_update_template(tid):
                     category = COALESCE(?, category),
                     fields_json = COALESCE(?, fields_json),
                     status = COALESCE(?, status),
+                    is_public = COALESCE(?, is_public),
                     published_at = ?,
                     updated_at = ?
                   WHERE id = ?''',
                (name, category, json.dumps(fields, ensure_ascii=False) if fields else None,
-                status, published_at, now_str(), tid))
+                status, int(bool(data.get('is_public', 0))) if data.get('is_public') is not None else None,
+                published_at, now_str(), tid))
     db.commit()
     row = db.execute('SELECT * FROM templates WHERE id = ?', (tid,)).fetchone()
     return jsonify({'code': 0, 'data': tpl_to_dict(row)})
 
 
 @bp.route('/api/templates/<tid>', methods=['DELETE'])
+@login_required(roles=('admin', 'teacher'))
 def api_delete_template(tid):
     db = get_db()
     row = db.execute('SELECT * FROM templates WHERE id = ?', (tid,)).fetchone()
     if not row:
         return jsonify({'code': 1, 'message': '模板不存在'}), 404
+    if not _can_manage(row):
+        return jsonify({'code': 403, 'message': '无权限：仅管理员或模板创建者可删除'}), 403
     rid = gen_id()
     expire = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
     db.execute('''INSERT INTO recycle (id, item_type, item_id, item_name, deleted_at, expire_at)
@@ -132,6 +174,7 @@ def api_delete_template(tid):
 
 
 @bp.route('/api/templates/<tid>/publish', methods=['POST'])
+@login_required(roles=('admin', 'teacher'))
 def api_publish_template(tid):
     """切换发布状态：已发布 -> 草稿（下架），草稿 -> 已发布（上架）。
 
@@ -141,6 +184,8 @@ def api_publish_template(tid):
     row = db.execute('SELECT * FROM templates WHERE id = ?', (tid,)).fetchone()
     if not row:
         return jsonify({'code': 1, 'message': '模板不存在'}), 404
+    if not _can_manage(row):
+        return jsonify({'code': 403, 'message': '无权限：仅管理员或模板创建者可发布'}), 403
 
     payload = request.get_json(silent=True) or {}
     target = payload.get('status')
@@ -248,6 +293,7 @@ def api_parse_template():
 
 
 @bp.route('/api/templates/<tid>/link-roster', methods=['POST'])
+@login_required(roles=('admin', 'teacher'))
 def api_link_roster(tid):
     """将名单关联到模板。
 
@@ -264,6 +310,8 @@ def api_link_roster(tid):
     tpl = db.execute('SELECT * FROM templates WHERE id = ?', (tid,)).fetchone()
     if not tpl:
         return jsonify({'code': 1, 'message': '模板不存在'}), 404
+    if not _can_manage(tpl):
+        return jsonify({'code': 403, 'message': '无权限：仅管理员或模板创建者可关联名单'}), 403
     roster = db.execute('SELECT * FROM rosters WHERE id = ?', (rid,)).fetchone()
     if not roster:
         return jsonify({'code': 1, 'message': '名单不存在'}), 404

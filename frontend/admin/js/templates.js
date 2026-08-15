@@ -18,16 +18,20 @@ let editorFields = [];
 let optionSets = [];
 let pendingFileBase64 = '';
 let pendingFileName = '';
+let curCat = '';   // 分类筛选当前值
 
 // ============ 列表 ============
 async function load() {
   content.innerHTML = '<div class="card"><div class="card-body muted">加载中…</div></div>';
   try {
-    const [tRes, rRes] = await Promise.all([api.getTemplates(), api.getRoster()]);
-    const list = tRes.data || [];
+    const [tRes, rRes, cRes] = await Promise.all([api.getTemplates(), api.getRoster(), api.getCategories()]);
+    let list = tRes.data || [];
     const rosters = rRes.data || [];
+    const cats = cRes.data || [];
     const rosterById = {};
     rosters.forEach(r => { rosterById[r.id] = r; });
+
+    if (curCat) list = list.filter(t => (t.category || '未分类') === curCat);
 
     // 并发取每个模板的进度（关联名单时）
     const progressMap = {};
@@ -43,20 +47,26 @@ async function load() {
       } catch (_) {}
     }));
 
+    const catOpts = ['<option value="">全部分类</option>']
+      .concat(cats.map(c => `<option value="${esc(c.name)}" ${curCat === c.name ? 'selected' : ''}>${esc(c.name)}</option>`))
+      .join('');
+
     content.innerHTML = `
-      <div class="toolbar">
+      <div class="filterbar">
         <button class="btn btn--primary" id="btn-new">+ 新建模板</button>
+        <select id="catFilter">${catOpts}</select>
         <span class="muted">共 ${list.length} 个模板</span>
         <div class="spacer"></div>
       </div>
       <div class="card">
         <div class="card-body" style="padding:0">
           ${list.length ? `<table class="table"><thead><tr>
-            <th>名称</th><th>分类</th><th>字段数</th><th>状态</th><th>关联</th><th>填写进度</th><th>更新时间</th><th class="actions">操作</th>
+            <th>名称</th><th>分类</th><th>公开</th><th>字段数</th><th>状态</th><th>关联</th><th>填写进度</th><th>更新时间</th><th class="actions">操作</th>
           </tr></thead><tbody>${list.map(t => rowHtml(t, progressMap[t.id], rosterInfoMap[t.id])).join('')}</tbody></table>`
           : '<div class="empty"><span class="ico">▤</span>暂无模板，点击「新建模板」开始</div>'}
         </div>
       </div>`;
+    content.querySelector('#catFilter')?.addEventListener('change', (e) => { curCat = e.target.value; load(); });
     bindList();
   } catch (e) {
     content.innerHTML = `<div class="card"><div class="card-body" style="color:var(--danger)">加载失败：${esc(e.message)}</div></div>`;
@@ -85,9 +95,11 @@ function rowHtml(t, prog, linked) {
     progCell = '<span class="dim">未获取</span>';
   }
   const isPublished = t.status === 'published';
+  const isPublic = t.is_public ? 1 : 0;
   return `<tr data-id="${t.id}">
     <td><b>${esc(t.name)}</b></td>
     <td>${esc(t.category || '未分类')}</td>
+    <td><label class="switch" title="是否进入公共模板池"><input type="checkbox" data-act="public" ${isPublic ? 'checked' : ''}><span class="slider"></span></label></td>
     <td>${n}</td>
     <td>${isPublished ? '<span class="badge badge--ok">已发布</span>' : '<span class="badge badge--draft">草稿</span>'}</td>
     <td>${linkCell}</td>
@@ -107,6 +119,12 @@ function bindList() {
   content.querySelector('#btn-new')?.addEventListener('click', () => openEditor());
   content.querySelectorAll('tbody tr').forEach(tr => {
     const id = tr.dataset.id;
+    tr.querySelector('[data-act="public"]')?.addEventListener('change', async (e) => {
+      try {
+        await api.updateTemplate(id, { is_public: e.target.checked ? 1 : 0 });
+        toast(e.target.checked ? '已设为公开（进入公共池）' : '已设为不公开', 'ok');
+      } catch (err) { toast(err.message || '操作失败', 'err'); load(); }
+    });
     tr.querySelector('[data-act="edit"]')?.addEventListener('click', () => openEditor(id));
     tr.querySelector('[data-act="publish"]')?.addEventListener('click', async () => {
       await api.publishTemplate(id); toast('已切换发布状态', 'ok'); load();
@@ -207,14 +225,14 @@ function collectFields() {
 
 async function openEditor(id) {
   editorFields = [];
-  let name = '', category = '未分类', fileName = '';
+  let name = '', category = '未分类', fileName = '', isPublic = 0;
   // 预先加载选项模板列表
   try { const os = await api.getOptionSets(); optionSets = os.data || []; } catch (_) { optionSets = []; }
   if (id) {
     const t = await api.getTemplate(id);
     const d = t.data;
     name = d.name; category = d.category || '未分类';
-    fileName = d.file_name || '';
+    fileName = d.file_name || ''; isPublic = d.is_public ? 1 : 0;
     editorFields = (d.fields || []).map(f => ({
       name: f.name, raw_type: f.raw_type || inferFieldType(f.name),
       options: f.options || '', option_set_id: f.option_set_id || '',
@@ -228,6 +246,7 @@ async function openEditor(id) {
         <input class="input" id="t-name" value="${esc(name)}" placeholder="如：奖学金申请表"></div>
       <div class="field"><label>分类</label>
         <input class="input" id="t-cat" value="${esc(category)}" placeholder="未分类"></div>
+      <div class="field"><label class="switch-cell"><span class="switch"><input type="checkbox" id="t-public" ${isPublic ? 'checked' : ''}><span class="slider"></span></span><span class="lbl">设为公开（进入公共模板池，所有人可填写）</span></label></div>
       <div class="field">
         <label>Word 模板文件（.docx，含 {{字段名}} 占位符，可选）</label>
         <div class="dropzone" id="t-drop">
@@ -253,6 +272,7 @@ async function openEditor(id) {
       if (!id) {
         const r = await api.createTemplate({
           name: nm, category: document.getElementById('t-cat').value.trim() || '未分类',
+          is_public: document.getElementById('t-public').checked ? 1 : 0,
           file_base64: pendingFileBase64 || undefined,
           file_name: pendingFileName || '未上传文件.docx',
           fields,
@@ -260,7 +280,11 @@ async function openEditor(id) {
         if (r.code !== 0) throw new Error(r.message || '创建失败');
         toast('模板已创建', 'ok');
       } else {
-        const r = await api.updateTemplate(id, { name: nm, category: document.getElementById('t-cat').value.trim() || '未分类', fields });
+        const r = await api.updateTemplate(id, {
+          name: nm, category: document.getElementById('t-cat').value.trim() || '未分类',
+          is_public: document.getElementById('t-public').checked ? 1 : 0,
+          fields,
+        });
         if (r.code !== 0) throw new Error(r.message || '保存失败');
         toast('已保存', 'ok');
       }

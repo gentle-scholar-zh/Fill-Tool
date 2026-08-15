@@ -22,7 +22,14 @@ async function _fetch(path, options = {}) {
   let data;
   try { data = text ? JSON.parse(text) : {}; }
   catch (e) { throw new Error('后端返回非 JSON 数据，请检查服务'); }
-  if (!res.ok) throw new Error(data.message || ('HTTP ' + res.status));
+  if (!res.ok) {
+    if (res.status === 401 && window.location.pathname.startsWith('/admin/')) {
+      localStorage.removeItem('ft_user');
+      window.location.replace('/user/login.html');
+      return;
+    }
+    throw new Error(data.message || ('HTTP ' + res.status));
+  }
   return data;
 }
 
@@ -48,6 +55,7 @@ export const api = {
     }),
 
   getSubmissions: (tid) => _fetch('/api/submissions' + (tid ? '?template_id=' + tid : '')),
+  getSubmissionsMine: () => _fetch('/api/submissions/mine'),
   createSubmission: (p) => _fetch('/api/submissions', { method: 'POST', body: JSON.stringify(p) }),
   getExportFields: (tid) => _fetch('/api/submissions/export-fields' + (tid ? '?template_id=' + tid : '')),
   exportSubmissions: async (params) => {
@@ -116,6 +124,17 @@ export const api = {
   getSiteUrl: () => _fetch('/api/settings/site-url'),
   setSiteUrl: (url) => _fetch('/api/settings/site-url', { method: 'PUT', body: JSON.stringify({ url }) }),
   updateRetention: (days) => _fetch('/api/settings/retention', { method: 'PUT', body: JSON.stringify({ days }) }),
+
+  // ---- PRD V2.0：认证与公共池、更新日志 ----
+  authCheck: () => _fetch('/api/auth/check'),
+  register: (d) => _fetch('/api/auth/register', { method: 'POST', body: JSON.stringify(d) }),
+  login: (d) => _fetch('/api/auth/login', { method: 'POST', body: JSON.stringify(d) }),
+  logout: () => _fetch('/api/auth/logout', { method: 'POST' }),
+  getPublicTemplates: () => _fetch('/api/templates/public'),
+  getChangelog: () => _fetch('/api/changelog'),
+  createChangelog: (d) => _fetch('/api/changelog', { method: 'POST', body: JSON.stringify(d) }),
+  updateChangelog: (id, d) => _fetch('/api/changelog/' + id, { method: 'PUT', body: JSON.stringify(d) }),
+  deleteChangelog: (id) => _fetch('/api/changelog/' + id, { method: 'DELETE' }),
 };
 
 // -------------------- 通用工具 --------------------
@@ -241,38 +260,96 @@ export function confirmDialog(message, onConfirm, confirmText = '确定') {
   modal.render();
 }
 
-// -------------------- 侧边栏 / 顶栏 --------------------
+// -------------------- 登录态 / 角色 --------------------
+export let currentUser = null;
+
+export function setCurrentUser(u) {
+  currentUser = u;
+  if (u) localStorage.setItem('ft_user', JSON.stringify(u));
+  else localStorage.removeItem('ft_user');
+}
+
+export function logout() {
+  setCurrentUser(null);
+  api.logout().catch(() => {});
+  window.location.replace('/user/login.html');
+}
+
+// -------------------- 侧边栏 / 顶栏（角色动态菜单 + 强制登录） --------------------
 const NAV = [
-  { key: 'dashboard', label: '仪表盘', ico: '◆', href: 'index.html' },
-  { key: 'templates', label: '模板管理', ico: '▤', href: 'templates.html' },
-  { key: 'submissions', label: '提交记录', ico: '▦', href: 'submissions.html' },
-  { key: 'roster', label: '名单管理', ico: '▥', href: 'roster.html' },
-  { key: 'option-sets', label: '选项模板', ico: '⌗', href: 'option-sets.html' },
-  { key: 'roster-categories', label: '分组管理', ico: '▦', href: 'roster-categories.html' },
-  { key: 'users', label: '用户管理', ico: '◍', href: 'users.html' },
-  { key: 'notifications', label: '通知', ico: '✉', href: 'notifications.html' },
-  { key: 'recycle', label: '回收站', ico: '♻', href: 'recycle.html' },
-  { key: 'settings', label: '设置', ico: '⚙', href: 'settings.html' },
+  { key: 'dashboard', label: '仪表盘', ico: '◆', href: 'index.html', roles: ['admin', 'teacher'] },
+  { key: 'templates', label: '模板管理', ico: '▤', href: 'templates.html', roles: ['admin', 'teacher'] },
+  { key: 'submissions', label: '提交记录', ico: '▦', href: 'submissions.html', roles: ['admin', 'teacher'] },
+  { key: 'roster', label: '名单管理', ico: '▥', href: 'roster.html', roles: ['admin', 'teacher'] },
+  { key: 'option-sets', label: '选项模板', ico: '⌗', href: 'option-sets.html', roles: ['admin', 'teacher'] },
+  { key: 'roster-categories', label: '分组管理', ico: '▦', href: 'roster-categories.html', roles: ['admin', 'teacher'] },
+  { key: 'users', label: '用户管理', ico: '◍', href: 'users.html', roles: ['admin'] },
+  { key: 'notifications', label: '通知', ico: '✉', href: 'notifications.html', roles: ['admin', 'teacher'] },
+  { key: 'recycle', label: '回收站', ico: '♻', href: 'recycle.html', roles: ['admin'] },
+  { key: 'settings', label: '设置', ico: '⚙', href: 'settings.html', roles: ['admin', 'teacher'] },
 ];
 
 export function initShell(active) {
+  // 同步读取本地登录态即可决定跳转（服务端仍为真源，API 401 时 _fetch 会再跳登录）
+  let u = null;
+  try { u = JSON.parse(localStorage.getItem('ft_user') || 'null'); } catch (_) {}
+  currentUser = u;
+  if (!u) {
+    window.location.replace('/user/login.html');
+    return false;
+  }
+  if (u.role === 'student') {
+    // 学生无后台权限，回到公共池
+    window.location.replace('/user/pool.html');
+    return false;
+  }
+  const role = u.role;
   const sidebar = document.getElementById('sidebar');
   const topbar = document.getElementById('topbar');
   if (sidebar) {
     sidebar.innerHTML = `
       <div class="brand">填表管理系统</div>
       <nav class="nav">
-        ${NAV.map(n => `<a href="${n.href}" class="${n.key === active ? 'active' : ''}"><span class="ico">${n.ico}</span>${n.label}</a>`).join('')}
+        ${NAV.filter(n => n.roles.includes(role)).map(n => `<a href="${n.href}" class="${n.key === active ? 'active' : ''}"><span class="ico">${n.ico}</span>${n.label}</a>`).join('')}
       </nav>
       <div class="foot">本地服务 · 端口 5000</div>`;
   }
   if (topbar) {
     const cur = NAV.find(n => n.key === active);
+    const roleLabel = role === 'admin' ? '管理员' : role === 'teacher' ? '教师' : '学生';
     topbar.innerHTML = `
       <h1>${cur ? cur.label : '管理端'}</h1>
-      <div class="right"><span id="clock"></span></div>`;
-    const clock = document.getElementById('clock');
-    const tick = () => { if (clock) clock.textContent = new Date().toLocaleString('zh-CN'); };
-    tick(); setInterval(tick, 1000);
+      <div class="right">
+        <span class="who">${esc(u.name)} · ${roleLabel}</span>
+        <button class="btn btn--ghost btn--sm" id="btn-logout">退出</button>
+      </div>`;
+    topbar.querySelector('#btn-logout')?.addEventListener('click', logout);
+  }
+  return true;
+}
+
+// -------------------- 更新日志折叠组件（前台底部） --------------------
+export async function renderChangelog(el) {
+  if (!el) return;
+  try {
+    const r = await api.getChangelog();
+    const list = (r.data || []).filter(c => (c.content || []).length);
+    if (!list.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      <div class="changelog">
+        <button class="cl-toggle" id="cl-toggle" type="button">📰 更新日志（${list.length}）</button>
+        <div class="cl-panel" id="cl-panel" style="display:none">
+          ${list.map(c => `<div class="cl-item">
+            <div class="cl-head"><b>${esc(c.version)}</b><span class="cl-date">${esc(c.date || '')}</span></div>
+            <ul>${c.content.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+          </div>`).join('')}
+        </div>
+      </div>`;
+    el.querySelector('#cl-toggle').addEventListener('click', () => {
+      const p = el.querySelector('#cl-panel');
+      p.style.display = p.style.display === 'none' ? 'block' : 'none';
+    });
+  } catch (_) {
+    el.innerHTML = '';
   }
 }

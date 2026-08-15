@@ -5,14 +5,25 @@ import json
 import zipfile as zf
 from datetime import datetime
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, g
 
 from ..config import SUB_DIR
 from ..db import get_db, gen_id, now_str, close_db
 from ..utils import safe_filename, tpl_to_dict, sub_to_dict, build_filename_from_fields, infer_type
 from ..render import render_docx
+from .auth import login_required
 
 bp = Blueprint('submissions', __name__)
+
+
+def _sub_owner_ok(row):
+    """admin/teacher 可访问任意提交；student 仅可访问自己 user_id 的提交。"""
+    u = getattr(g, 'current_user', None)
+    if not u:
+        return False
+    if u['role'] in ('admin', 'teacher'):
+        return True
+    return bool(row['user_id']) and row['user_id'] == u['id']
 
 
 @bp.route('/api/submissions', methods=['GET'])
@@ -24,6 +35,45 @@ def api_list_submissions():
     else:
         rows = db.execute('SELECT * FROM submissions ORDER BY submitted_at DESC').fetchall()
     return jsonify({'code': 0, 'data': [sub_to_dict(r) for r in rows]})
+
+
+@bp.route('/api/submissions/mine', methods=['GET'])
+@login_required()
+def api_my_submissions():
+    """当前登录用户的所有提交（用于学生个人中心 / 公共池「修改」预检）。"""
+    uid = g.current_user['id']
+    db = get_db()
+    rows = db.execute('''SELECT s.*, t.name AS tname, t.fields_json AS fields_json
+                         FROM submissions s LEFT JOIN templates t ON s.template_id = t.id
+                         WHERE s.user_id = ? ORDER BY s.submitted_at DESC''', (uid,)).fetchall()
+    out = []
+    for r in rows:
+        d = sub_to_dict(r)
+        d['template_name'] = r['tname']
+        try:
+            d['fields'] = json.loads(r['fields_json']) if r['fields_json'] else []
+        except Exception:
+            d['fields'] = []
+        out.append(d)
+    return jsonify({'code': 0, 'data': out})
+
+
+@bp.route('/api/submissions/<int:sid>', methods=['GET'])
+def api_get_submission(sid):
+    """获取单条提交详情（用于「修改」回填）。仅本人或管理员/教师可见。"""
+    db = get_db()
+    row = db.execute('SELECT * FROM submissions WHERE id = ?', (sid,)).fetchone()
+    if not row:
+        return jsonify({'code': 1, 'message': '记录不存在'}), 404
+    if not _sub_owner_ok(row):
+        return jsonify({'code': 403, 'message': '无权限查看该提交'}), 403
+    d = sub_to_dict(row)
+    tpl = db.execute('SELECT fields_json FROM templates WHERE id = ?', (row['template_id'],)).fetchone()
+    try:
+        d['fields'] = json.loads(tpl['fields_json']) if tpl and tpl['fields_json'] else []
+    except Exception:
+        d['fields'] = []
+    return jsonify({'code': 0, 'data': d})
 
 
 @bp.route('/api/submissions/export-fields', methods=['GET'])
@@ -108,12 +158,20 @@ def api_create_submission():
     ip = request.headers.get('X-Forwarded-For', request.remote_addr or '')
     submitter = verified_name or form_data.get('姓名') or form_data.get('name') or '匿名'
     roster_row_id = (data.get('roster_row_id') or '').strip()
+    # 登录模式下，把提交归属到当前登录用户（student 可查看自己的提交历史）
+    uid = g.current_user['id'] if getattr(g, 'current_user', None) else None
 
     # 定位已有记录：
+    # 0) 前端「修改」场景：显式传入 submission_id 且当前用户有权操作 —— 精确更新该记录；
     # 1) 有名单时，严格按「模板 + 名额行」定位 —— 同一人多个名额各自独立；
     # 2) 无名单时（roster_row_id 为空），退化为按提交人定位（保持旧行为，重复提交即覆盖）。
     existing = None
-    if roster_row_id:
+    edit_sub_id = data.get('submission_id')
+    if edit_sub_id:
+        rec = db.execute('SELECT * FROM submissions WHERE id = ?', (edit_sub_id,)).fetchone()
+        if rec and rec['template_id'] == tid and _sub_owner_ok(rec):
+            existing = rec
+    if existing is None and roster_row_id:
         existing = db.execute('SELECT * FROM submissions WHERE template_id = ? AND roster_row_id = ?',
                                (tid, roster_row_id)).fetchone()
     if existing is None and not roster_row_id:
@@ -130,9 +188,9 @@ def api_create_submission():
                     roster_row_id or existing['roster_row_id'] or None, existing['id']))
         sub_id = existing['id']
     else:
-        cur = db.execute('''INSERT INTO submissions (template_id, data_json, submitted_at, submitter, ip, roster_row_id, version, edit_count)
-                            VALUES (?, ?, ?, ?, ?, ?, 1, 0)''',
-                         (tid, json.dumps(form_data, ensure_ascii=False), now_str(), submitter, ip, roster_row_id or None))
+        cur = db.execute('''INSERT INTO submissions (template_id, data_json, submitted_at, submitter, ip, roster_row_id, version, edit_count, user_id)
+                            VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)''',
+                         (tid, json.dumps(form_data, ensure_ascii=False), now_str(), submitter, ip, roster_row_id or None, uid))
         sub_id = cur.lastrowid
     db.commit()
 
@@ -175,11 +233,14 @@ def api_download_submission(sid):
 
 
 @bp.route('/api/submissions/<int:sid>', methods=['DELETE'])
+@login_required(roles=('admin', 'teacher'))
 def api_delete_submission(sid):
     db = get_db()
     row = db.execute('SELECT * FROM submissions WHERE id = ?', (sid,)).fetchone()
     if not row:
         return jsonify({'code': 1, 'message': '记录不存在'}), 404
+    if not _sub_owner_ok(row):
+        return jsonify({'code': 403, 'message': '无权限删除该提交'}), 403
     db.execute('DELETE FROM submissions WHERE id = ?', (sid,))
     db.commit()
     try:
@@ -195,6 +256,7 @@ def api_delete_submission(sid):
 
 
 @bp.route('/api/submissions/batch', methods=['DELETE'])
+@login_required(roles=('admin', 'teacher'))
 def api_batch_delete_submissions():
     """批量删除（{ids:[...]} 或 {template_id} 或 {} 清空全部）。"""
     data = request.get_json() or {}
@@ -231,6 +293,7 @@ def api_batch_delete_submissions():
 
 
 @bp.route('/api/submissions/export', methods=['POST'])
+@login_required(roles=('admin', 'teacher'))
 def api_export_submissions():
     """批量导出：按 splitField 分文件夹，返回 zip。"""
     data = request.get_json() or {}

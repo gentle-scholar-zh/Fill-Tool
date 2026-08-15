@@ -12,11 +12,13 @@ from .settings import bp as settings_bp
 from .fill import bp as fill_bp
 from .pages import bp as pages_bp
 from .option_sets import bp as option_sets_bp
+from .auth import bp as auth_bp
+from .changelog import bp as changelog_bp
 
 ALL_BLUEPRINTS = [
     templates_bp, submissions_bp, roster_bp, categories_bp,
     users_bp, notifications_bp, recycle_bp, share_bp,
-    settings_bp, fill_bp, pages_bp, option_sets_bp,
+    settings_bp, fill_bp, pages_bp, option_sets_bp, auth_bp, changelog_bp,
 ]
 
 
