@@ -1,5 +1,5 @@
 // frontend/admin/js/option-sets.js —— 下拉选项模板管理
-import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate } from './common.js';
+import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate, icon } from './common.js';
 
 initShell('option-sets');
 const content = document.getElementById('content');
@@ -14,14 +14,14 @@ async function load() {
     content.innerHTML = `
       <div class="toolbar">
         <button class="btn btn--primary" id="btn-add">+ 新建选项模板</button>
-        <button class="btn btn--sm" id="btn-upload">⬆ 上传 Excel</button>
+        <button class="btn btn--sm" id="btn-upload">上传 Excel</button>
         <span class="muted">共 ${list.length} 个选项模板 · 量大时用「上传 Excel」批量导入，填写页支持搜索</span>
       </div>
       <div class="card"><div class="card-body" style="padding:0">
         ${list.length ? `<table class="table"><thead><tr>
           <th>名称</th><th>选项数量</th><th>预览</th><th>创建时间</th><th class="actions">操作</th>
         </tr></thead><tbody>${list.map(c => rowHtml(c)).join('')}</tbody></table>`
-        : '<div class="empty"><span class="ico">⌗</span>暂无选项模板，点击「新建选项模板」或上传 Excel</div>'}
+        : `<div class="empty">${icon('option-sets', 30)}<div>暂无选项模板，点击「新建选项模板」或上传 Excel</div></div>`}
       </div></div>`;
     bind(list);
   } catch (e) {

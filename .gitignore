@@ -20,6 +20,7 @@ node_modules/
 
 # ---- 浏览器测试缓存（puppeteer 残留，体积大，无关业务）----
 .chrome_tmp/
+_sc/           # E2E 测试脚本 + 截图目录（puppeteer 残留）
 
 # ---- 本地工作记忆（不进入仓库）----
 .workbuddy/

@@ -3,19 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>模板填写 - 填表平台</title>
+<title>公开模板池 - 填表平台</title>
 <link rel="stylesheet" href="/user/css/style.css">
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <div class="head">
-      <h1>模板填写</h1>
-      <p>选择一个公开模板，即可直接填写提交</p>
+    <div class="hero">
+      <div class="mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6M9 19h4"/></svg></div>
+      <h1>公开模板池</h1>
+      <p>选择一个公开模板，即可直接在线填写与提交</p>
     </div>
-    <div class="ptoolbar">
+
+    <div class="share-row">
+      <button class="btn btn--ghost" id="btnCopy" type="button">复制本页链接</button>
+      <button class="btn btn--ghost" id="btnQr" type="button">二维码</button>
+      <button class="btn btn--ghost" id="btnCenter" type="button" style="width:auto;margin:0;padding:11px 14px">我的</button>
+    </div>
+    <div id="qrBox" class="qr-box" style="display:none"></div>
+
+    <div class="ptoolbar" style="margin-top:16px">
       <select id="tplSelect"><option value="">— 请选择模板 —</option></select>
-      <button class="btn btn--ghost" id="btnCenter" type="button" style="width:auto;margin:0;padding:9px 14px;font-size:13px">我的</button>
     </div>
     <div id="banner"></div>
     <div id="formArea"><div class="pool-empty">请先在上方选择一个模板</div></div>

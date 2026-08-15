@@ -1,5 +1,5 @@
 // frontend/admin/js/roster-categories.js —— 分组管理（管理端名词：分组 / 组）
-import { api, initShell, toast, Modal, confirmDialog, esc } from './common.js';
+import { api, initShell, toast, Modal, confirmDialog, esc, icon } from './common.js';
 
 initShell('roster-categories');
 const content = document.getElementById('content');
@@ -25,7 +25,7 @@ async function load() {
       <div class="card"><div class="card-body" style="padding:0">
         ${cats.length ? `<table class="table"><thead><tr><th>分组名称</th><th>关联名单数</th><th>已关联名单</th><th style="width:180px">操作</th></tr></thead>
           <tbody>${cats.map(c => rowHtml(c, byCat[c.id] || [])).join('')}</tbody></table>`
-        : '<div class="empty"><span class="ico">▦</span>暂无分组，点击「新建分组」开始归类名单</div>'}
+        : `<div class="empty">${icon('roster-categories', 30)}<div>暂无分组，点击「新建分组」开始归类名单</div></div>`}
       </div></div>`;
     bind(cats, byCat);
   } catch (e) {

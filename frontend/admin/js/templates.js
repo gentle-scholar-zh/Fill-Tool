@@ -1,5 +1,5 @@
 // frontend/admin/js/templates.js
-import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate, inferFieldType } from './common.js';
+import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate, inferFieldType, icon } from './common.js';
 
 initShell('templates');
 const content = document.getElementById('content');
@@ -63,7 +63,7 @@ async function load() {
           ${list.length ? `<table class="table"><thead><tr>
             <th>名称</th><th>分类</th><th>公开</th><th>字段数</th><th>状态</th><th>关联</th><th>填写进度</th><th>更新时间</th><th class="actions">操作</th>
           </tr></thead><tbody>${list.map(t => rowHtml(t, progressMap[t.id], rosterInfoMap[t.id])).join('')}</tbody></table>`
-          : '<div class="empty"><span class="ico">▤</span>暂无模板，点击「新建模板」开始</div>'}
+          : `<div class="empty">${icon('templates', 30)}<div>暂无模板，点击「新建模板」开始</div></div>`}
         </div>
       </div>`;
     content.querySelector('#catFilter')?.addEventListener('change', (e) => { curCat = e.target.value; load(); });
@@ -252,7 +252,7 @@ async function openEditor(id) {
         <div class="dropzone" id="t-drop">
           <input type="file" id="t-file" accept=".docx" hidden>
           <div class="dz-inner">
-            <div class="dz-ico">⬆</div>
+            <div class="dz-ico">${icon('upload', 22)}</div>
             <div class="dz-main"><b>点击选择</b> 或拖拽 Word 文件到此处</div>
             <div class="dz-sub">支持 .docx 格式，上传后自动解析字段；也可不上传直接手动添加字段</div>
             <div class="dz-file" id="dz-file"></div>

@@ -7,6 +7,41 @@ const tplSelect = document.getElementById('tplSelect');
 const banner = document.getElementById('banner');
 const formArea = document.getElementById('formArea');
 const btnCenter = document.getElementById('btnCenter');
+const btnCopy = document.getElementById('btnCopy');
+const btnQr = document.getElementById('btnQr');
+const qrBox = document.getElementById('qrBox');
+
+if (me) btnCenter.style.display = '';
+else btnCenter.textContent = '登录';
+btnCenter.addEventListener('click', () => { window.location.href = me ? '/user/center.html' : '/user/login.html'; });
+
+// 复制本页链接
+btnCopy.addEventListener('click', async () => {
+  const url = location.origin + '/user/pool.html';
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('本页链接已复制', 'ok');
+  } catch (_) {
+    // 降级：选中文本
+    const ta = document.createElement('textarea'); ta.value = url; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); ta.remove();
+    toast('本页链接已复制', 'ok');
+  }
+});
+
+// 二维码（公开池入口）
+btnQr.addEventListener('click', async () => {
+  if (qrBox.style.display !== 'none') { qrBox.style.display = 'none'; return; }
+  const url = location.origin + '/user/pool.html';
+  qrBox.innerHTML = '<div class="qr-cap">生成中…</div>';
+  qrBox.style.display = 'block';
+  try {
+    const r = await api.createQrCode(url);
+    qrBox.innerHTML = `<img src="data:image/png;base64,${r.data.image}" alt="二维码"><div class="qr-cap">扫码打开公开模板池</div>`;
+  } catch (e) {
+    qrBox.innerHTML = '<div class="qr-cap">二维码生成失败</div>';
+  }
+});
 
 let state = {
   tid: '',
@@ -240,16 +275,26 @@ async function submit() {
 function renderSuccess(sub) {
   const dl = sub.download_url ? `<a class="btn btn--ghost" href="${sub.download_url}" style="width:100%;margin:0;text-decoration:none;text-align:center">下载我的提交（docx）</a>` : '';
   formArea.innerHTML = `
-    <div class="head" style="border:none;margin:0;padding:10px 0 6px">
-      <div class="closed-ico">✅</div>
+    <div class="head" style="border:none;margin:0;padding:6px 0 2px">
+      <div class="closed-ico">${checkMark()}</div>
       <h1 style="font-size:18px">提交成功</h1>
       <p>提交时间：${esc(sub.submitted_at || '')} · 版本 v${sub.version || 1}（已修改 ${sub.edit_count || 0} 次）</p>
     </div>
     <div class="success-actions">
-      <button class="btn btn--primary" id="btnModify2" type="button">修改提交内容</button>
+      <button class="btn btn--primary" id="btnAgain" type="button">再次填写（新建一份）</button>
+      <button class="btn btn--ghost" id="btnModify2" type="button">修改上一份提交</button>
       ${dl}
     </div>`;
+  formArea.querySelector('#btnAgain').addEventListener('click', () => {
+    state.editingSid = null; state.existing = null; banner.innerHTML = '';
+    renderForm(state.fields, {});
+  });
   formArea.querySelector('#btnModify2').addEventListener('click', () => enterEdit(sub));
+}
+
+// 线条黑白「成功」标记（替换大绿底✓ emoji）
+function checkMark() {
+  return '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink)"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.3l3 3 6-6.6"/></svg>';
 }
 
 function enterEdit(sub) {

@@ -6,6 +6,67 @@
 // 同域部署，apiBaseUrl 取当前源即可（后端由本服务直接提供）。
 const apiBaseUrl = window.location.origin;
 
+// -------------------- 线条黑白矢量图标系统 --------------------
+// 统一 24x24 stroke 图标，currentColor 着色，替换所有彩色 emoji / 符号。
+// 用法：icon('check') → 返回 <svg> 字符串；icon('copy', 18) → 指定尺寸。
+const ICONS = {
+  dashboard: '<path d="M3 13h8V3H3z"/><path d="M3 21h8v-6H3z"/><path d="M13 21h8V11h-8z"/><path d="M13 3v6h8V3z"/>',
+  templates: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16"/><path d="M9 9v11"/>',
+  submissions: '<path d="M8 6h11M8 12h11M8 18h11"/><path d="M3.6 6h.01M3.6 12h.01M3.6 18h.01"/>',
+  roster: '<rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+  'option-sets': '<path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h12M20 18h0"/><circle cx="7" cy="6" r="1.6"/><circle cx="16" cy="12" r="1.6"/><circle cx="16" cy="18" r="1.6"/>',
+  'roster-categories': '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.5a3 3 0 0 1 0 5.8M16.5 20a5.2 5.2 0 0 0-2.5-4.4"/>',
+  notifications: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 19a2 2 0 0 0 4 0"/>',
+  recycle: '<path d="M7 8l-2 3 2 3M17 8l2 3-2 3M9 19h6"/><path d="M5 11l3-6h8l3 6"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.5 12h-3M22.5 12h-3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  'alert': '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  'arrow-left': '<path d="M15 5l-7 7 7 7"/><path d="M9 12h11"/>',
+  'arrow-right': '<path d="M9 5l7 7-7 7"/><path d="M13 12H2"/>',
+  user: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+  lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
+  qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-7v-3M17 17h.01"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M5 7h14M9 7V5h6v2M6 7l1 13h10l1-13"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="2.6"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-3.5-3.5"/>',
+  'chevron-down': '<path d="M6 9l6 6 6-6"/>',
+  'chevron-right': '<path d="M9 6l6 6-6 6"/>',
+  logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 12H3M7 8l-4 4 4 4"/>',
+  share: '<circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.1 10.9l7.8-3.8M8.1 13.1l7.8 3.8"/>',
+  link: '<path d="M10 14a4 4 0 0 0 6 .5l2-2a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6-.5l-2 2a4 4 0 0 0 6 6l1-1"/>',
+  download: '<path d="M12 3v12M7 11l5 5 5-5M5 21h14"/>',
+  upload: '<path d="M12 21V9M7 13l5-5 5 5M5 3h14"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14-4M4 13a8 8 0 0 0 14 4"/><path d="M4 4v5h5M20 20v-5h-5"/>',
+  home: '<path d="M4 11l8-7 8 7M6 10v10h12V10"/>',
+  clipboard: '<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6M9 19h4"/>',
+  send: '<path d="M21 3L3 11l7 3 3 7 8-18z"/><path d="M10 14l4-4"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  'eye-off': '<path d="M3 3l18 18M10.5 5.2A10 10 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.7M6.5 6.5A17 17 0 0 0 2 12s4 7 10 7a10 10 0 0 0 3.4-.6"/>',
+};
+
+export function icon(name, size = 20, cls = '') {
+  const path = ICONS[name] || ICONS.info;
+  return `<svg class="ico ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+}
+
+// 生成「图标按钮」：<button class="icon-btn">icon</button>
+export function iconBtn(name, opts = {}) {
+  const { size = 18, title = '', cls = '', onClick = null } = opts;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'icon-btn ' + cls;
+  btn.innerHTML = icon(name, size);
+  if (title) btn.title = title;
+  if (onClick) btn.addEventListener('click', onClick);
+  return btn;
+}
+
 // -------------------- 请求封装 --------------------
 async function _fetch(path, options = {}) {
   const url = apiBaseUrl + path;
@@ -277,16 +338,16 @@ export function logout() {
 
 // -------------------- 侧边栏 / 顶栏（角色动态菜单 + 强制登录） --------------------
 const NAV = [
-  { key: 'dashboard', label: '仪表盘', ico: '◆', href: 'index.html', roles: ['admin', 'teacher'] },
-  { key: 'templates', label: '模板管理', ico: '▤', href: 'templates.html', roles: ['admin', 'teacher'] },
-  { key: 'submissions', label: '提交记录', ico: '▦', href: 'submissions.html', roles: ['admin', 'teacher'] },
-  { key: 'roster', label: '名单管理', ico: '▥', href: 'roster.html', roles: ['admin', 'teacher'] },
-  { key: 'option-sets', label: '选项模板', ico: '⌗', href: 'option-sets.html', roles: ['admin', 'teacher'] },
-  { key: 'roster-categories', label: '分组管理', ico: '▦', href: 'roster-categories.html', roles: ['admin', 'teacher'] },
-  { key: 'users', label: '用户管理', ico: '◍', href: 'users.html', roles: ['admin'] },
-  { key: 'notifications', label: '通知', ico: '✉', href: 'notifications.html', roles: ['admin', 'teacher'] },
-  { key: 'recycle', label: '回收站', ico: '♻', href: 'recycle.html', roles: ['admin'] },
-  { key: 'settings', label: '设置', ico: '⚙', href: 'settings.html', roles: ['admin', 'teacher'] },
+  { key: 'dashboard', label: '仪表盘', icon: 'dashboard', href: 'index.html', roles: ['admin', 'teacher'] },
+  { key: 'templates', label: '模板管理', icon: 'templates', href: 'templates.html', roles: ['admin', 'teacher'] },
+  { key: 'submissions', label: '提交记录', icon: 'submissions', href: 'submissions.html', roles: ['admin', 'teacher'] },
+  { key: 'roster', label: '名单管理', icon: 'roster', href: 'roster.html', roles: ['admin', 'teacher'] },
+  { key: 'option-sets', label: '选项模板', icon: 'option-sets', href: 'option-sets.html', roles: ['admin', 'teacher'] },
+  { key: 'roster-categories', label: '分组管理', icon: 'roster-categories', href: 'roster-categories.html', roles: ['admin', 'teacher'] },
+  { key: 'users', label: '用户管理', icon: 'users', href: 'users.html', roles: ['admin'] },
+  { key: 'notifications', label: '通知', icon: 'notifications', href: 'notifications.html', roles: ['admin', 'teacher'] },
+  { key: 'recycle', label: '回收站', icon: 'recycle', href: 'recycle.html', roles: ['admin'] },
+  { key: 'settings', label: '设置', icon: 'settings', href: 'settings.html', roles: ['admin', 'teacher'] },
 ];
 
 export function initShell(active) {
@@ -310,7 +371,7 @@ export function initShell(active) {
     sidebar.innerHTML = `
       <div class="brand">填表管理系统</div>
       <nav class="nav">
-        ${NAV.filter(n => n.roles.includes(role)).map(n => `<a href="${n.href}" class="${n.key === active ? 'active' : ''}"><span class="ico">${n.ico}</span>${n.label}</a>`).join('')}
+        ${NAV.filter(n => n.roles.includes(role)).map(n => `<a href="${n.href}" class="${n.key === active ? 'active' : ''}">${icon(n.icon, 18)}<span>${n.label}</span></a>`).join('')}
       </nav>
       <div class="foot">本地服务 · 端口 5000</div>`;
   }
@@ -337,7 +398,7 @@ export async function renderChangelog(el) {
     if (!list.length) { el.innerHTML = ''; return; }
     el.innerHTML = `
       <div class="changelog">
-        <button class="cl-toggle" id="cl-toggle" type="button">📰 更新日志（${list.length}）</button>
+        <button class="cl-toggle" id="cl-toggle" type="button">${icon('info', 16)} 更新日志（${list.length}）</button>
         <div class="cl-panel" id="cl-panel" style="display:none">
           ${list.map(c => `<div class="cl-item">
             <div class="cl-head"><b>${esc(c.version)}</b><span class="cl-date">${esc(c.date || '')}</span></div>

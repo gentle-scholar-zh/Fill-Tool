@@ -1,5 +1,5 @@
 // frontend/admin/js/changelog.js —— 更新日志管理（仅管理员）
-import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate } from './common.js';
+import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate, icon } from './common.js';
 
 if (!initShell('changelog')) { /* 未登录会跳转 */ }
 
@@ -20,7 +20,7 @@ async function load() {
       <div class="card">
         <div class="card-body" style="padding:0">
           ${list.length ? `<div class="cg-list">${list.map(c => itemHtml(c)).join('')}</div>`
-            : '<div class="empty"><span class="ico">📰</span>暂无更新日志</div>'}
+            : `<div class="empty">${icon('info', 30)}<div>暂无更新日志</div></div>`}
         </div>
       </div>`;
     content.querySelector('#btn-new')?.addEventListener('click', () => openEditor());

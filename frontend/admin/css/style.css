@@ -1,33 +1,33 @@
 /* frontend/admin/css/style.css
- * 管理端共享样式 —— 现代简洁、紧凑、信息密度高。
+ * 管理端共享样式 —— 简洁黑白、紧凑、信息密度高（去深色渐变 / 去花哨）。
  * 关键修复：表格操作列 nowrap 不换行、按钮紧凑不堆叠。
  */
 :root {
-  --bg: #f3f5fa;
-  --bg-2: #eef1f7;
+  --bg: #f6f6f7;
+  --bg-2: #eef1f5;
   --panel: #ffffff;
-  --ink: #1a2638;
-  --ink-2: #5a6a80;
-  --ink-3: #8a96a8;
-  --line: #e6ebf2;
-  --line-2: #eef1f7;
-  --brand: #3b5de0;
-  --brand-2: #4a6cf7;
-  --brand-soft: #eef2ff;
-  --danger: #e0483b;
-  --danger-soft: #fdecea;
-  --ok: #1f9d6a;
-  --ok-soft: #e6f6ee;
-  --warn: #e6a23c;
-  --warn-soft: #fdf3e3;
-  --sidebar: #0f1b2d;
-  --sidebar-2: #18263c;
-  --sidebar-ink: #aab6c8;
-  --sidebar-ink-active: #ffffff;
-  --shadow: 0 4px 18px rgba(20, 40, 80, .07);
-  --shadow-2: 0 8px 28px rgba(20, 40, 80, .10);
-  --radius: 10px;
-  --radius-sm: 6px;
+  --ink: #1a1a1a;
+  --ink-2: #5b5b5f;
+  --ink-3: #9a9aa0;
+  --line: #e8e8ea;
+  --line-2: #f0f0f1;
+  --brand: #1a1a1a;
+  --brand-2: #000000;
+  --brand-soft: #f2f2f4;
+  --danger: #d6443c;
+  --danger-soft: #fdf3f2;
+  --ok: #1f9d57;
+  --ok-soft: #eaf5ee;
+  --warn: #c98a1e;
+  --warn-soft: #fbf3e4;
+  --sidebar: #ffffff;
+  --sidebar-2: #ffffff;
+  --sidebar-ink: #5b5b5f;
+  --sidebar-ink-active: #1a1a1a;
+  --shadow: 0 1px 3px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.05);
+  --shadow-2: 0 8px 28px rgba(0,0,0,.08);
+  --radius: 12px;
+  --radius-sm: 8px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
@@ -38,47 +38,51 @@ body {
 }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
+.ico { width: 20px; height: 20px; display: inline-block; vertical-align: middle; flex-shrink: 0; color: currentColor; }
+a .ico, button .ico { margin-right: 6px; }
 input, select, textarea { font-family: inherit; font-size: 13.5px; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: #cdd6e2; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #aab6c8; }
 .layout { display: flex; min-height: 100vh; }
 .sidebar {
-  width: 218px; flex: 0 0 218px;
-  background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-2) 100%);
+  width: 220px; flex: 0 0 220px;
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
   color: var(--sidebar-ink);
   display: flex; flex-direction: column;
   position: sticky; top: 0; height: 100vh;
 }
 .sidebar .brand {
   padding: 18px 18px 16px;
-  font-size: 15px; font-weight: 700; color: #fff;
+  font-size: 15px; font-weight: 700; color: var(--ink);
   letter-spacing: .5px;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 9px;
 }
 .sidebar .brand::before {
-  content: ''; width: 22px; height: 22px; border-radius: 6px;
-  background: linear-gradient(135deg, #4a6cf7, #6e8bff);
-  display: inline-block;
+  content: ''; width: 22px; height: 22px; border-radius: 7px;
+  background: var(--ink); display: inline-block;
 }
-.sidebar .nav { padding: 8px 10px; flex: 1; overflow-y: auto; }
+.sidebar .nav { padding: 8px 12px; flex: 1; overflow-y: auto; }
 .sidebar .nav a {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 11px;
   padding: 9px 12px; margin-bottom: 2px;
   color: var(--sidebar-ink); font-size: 13.5px;
   border-radius: var(--radius-sm);
   border-left: 2px solid transparent;
   transition: background .15s, color .15s;
 }
-.sidebar .nav a:hover { background: rgba(255,255,255,.06); color: #e5edf8; }
+.sidebar .nav a:hover { background: var(--brand-soft); color: var(--ink); }
 .sidebar .nav a.active {
-  background: rgba(74,108,247,.18); color: var(--sidebar-ink-active);
-  border-left-color: var(--brand-2);
+  background: var(--brand-soft); color: var(--sidebar-ink-active);
+  border-left-color: var(--ink);
+  font-weight: 600;
 }
-.sidebar .nav .ico { width: 18px; text-align: center; font-size: 14px; opacity: .85; }
+.sidebar .nav .ico { width: 18px; text-align: center; opacity: .9; color: var(--ink-2); }
+.sidebar .nav a.active .ico { color: var(--ink); }
 .sidebar .foot {
-  padding: 12px 18px; font-size: 11.5px; color: #6b7a90;
-  border-top: 1px solid rgba(255,255,255,.06);
+  padding: 12px 18px; font-size: 11.5px; color: var(--ink-3);
+  border-top: 1px solid var(--line);
 }
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .topbar {
@@ -162,10 +166,12 @@ input, select, textarea { font-family: inherit; font-size: 13.5px; }
 }
 .table .actions { display: inline-flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
 .table .empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center; color: var(--ink-2);
-  padding: 48px 20px; font-size: 13px;
+  padding: 48px 20px; font-size: 13px; gap: 8px;
 }
-.table .empty .ico { font-size: 36px; display: block; margin-bottom: 8px; opacity: .35; }
+.table .empty .ico { display: block; opacity: .35; color: var(--ink-3); }
+.table .empty .ico + div { color: var(--ink-2); }
 .badge {
   display: inline-block; padding: 2px 9px; border-radius: 20px;
   font-size: 11.5px; font-weight: 500; line-height: 1.5;

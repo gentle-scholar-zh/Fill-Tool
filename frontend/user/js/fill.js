@@ -52,8 +52,8 @@ async function boot() {
   } catch (e) {
     const isClosed = e.message === '模板已下架';
     app.innerHTML = `<div class="card center">
-      <div class="closed-ico">⛔</div>
-      <h2>${isClosed ? '模板已下架' : '⚠️ ' + esc(e.message)}</h2>
+      <div class="closed-ico">${alertMark()}</div>
+      <h2>${isClosed ? '模板已下架' : esc(e.message)}</h2>
       <p class="muted mt">${isClosed ? '该模板已停止收集，无法继续填写。请联系管理员。' : '请确认链接是否正确或稍后重试。'}</p>
     </div>`;
   }
@@ -74,7 +74,7 @@ function renderVerifyOrSlots() {
 function renderVerify() {
   app.innerHTML = `
     <div class="card">
-      <div class="head"><h1>🏅 ${esc(TMPL.name)}</h1><p>请先验证身份（${esc(ROSTER.roster_name)}）</p></div>
+      <div class="head"><h1>${esc(TMPL.name)}</h1><p>请先验证身份（${esc(ROSTER.roster_name)}）</p></div>
       <div class="verify-box">
         <div class="field"><label>${esc(ROSTER.id_field)}<span class="req">*</span></label>
           <input id="v-id" placeholder="请输入${esc(ROSTER.id_field)}"></div>
@@ -131,7 +131,7 @@ function renderSlots() {
   app.innerHTML = `
     <div class="card">
       <div class="head">
-        <h1>🏅 ${esc(TMPL.name)}</h1>
+        <h1>${esc(TMPL.name)}</h1>
         <p>已验证：${esc(VERIFIED.student_name)}（${esc(VERIFIED.student_id)}）· 进度 ${filled}/${slots.length}</p>
       </div>
       <div class="slots">${cards}</div>
@@ -163,7 +163,7 @@ function renderFieldsHtml(fields, prefill, isEdit) {
         <input type="hidden" name="${esc(name)}" value="${esc(val)}">
         <input class="input combo-input" value="${esc(val)}" placeholder="点击或输入搜索选择…" autocomplete="off" readonly>
         <div class="combo-panel hidden">
-          <div class="combo-search"><input class="input" placeholder="🔍 搜索…" autocomplete="off"></div>
+          <div class="combo-search"><input class="input" placeholder="搜索…" autocomplete="off"></div>
           <div class="combo-list">${optHtml}</div>
           <div class="combo-empty hidden">无匹配项</div>
         </div>
@@ -240,11 +240,11 @@ function renderForm(rowId, isEdit) {
   const award = pickAward(slot, ROSTER);
   app.innerHTML = `
     <div class="card">
-      <div class="head"><h1>🏅 ${esc(TMPL.name)}</h1><p>${esc(award ? '奖项：' + award : '填写表单')}${isEdit ? ' · 修改已提交内容' : ''}</p></div>
+      <div class="head"><h1>${esc(TMPL.name)}</h1><p>${esc(award ? '奖项：' + award : '填写表单')}${isEdit ? ' · 修改已提交内容' : ''}</p></div>
       <form id="form">${fieldsHtml}
         <div class="form-actions">
           <button type="button" class="btn btn--ghost" id="back">返回名单</button>
-          <button type="submit" class="btn btn--primary">${isEdit ? '保存修改' : '✓ 提交'}</button>
+          <button type="submit" class="btn btn--primary">${isEdit ? '保存修改' : '提交'}</button>
         </div>
       </form>
     </div>`;
@@ -261,11 +261,11 @@ function renderSingleForm() {
   const fieldsHtml = renderFieldsHtml(TMPL.fields || [], {}, false);
   app.innerHTML = `
     <div class="card">
-      <div class="head"><h1>🏅 ${esc(TMPL.name)}</h1><p>请填写以下表单</p></div>
+      <div class="head"><h1>${esc(TMPL.name)}</h1><p>请填写以下表单</p></div>
       <div class="verify-hint">ℹ️ 本模板未关联名单，无需身份校验，任何人都可直接填写。如需限定仅名单内人员填写，请到管理端「名单管理」将该名单关联到本模板。</div>
       <form id="form">${fieldsHtml}
         <div class="form-actions">
-          <button type="submit" class="btn btn--primary">✓ 提交</button>
+          <button type="submit" class="btn btn--primary">提交</button>
         </div>
       </form>
     </div>`;
@@ -318,7 +318,7 @@ async function submit(rowId) {
     renderSuccess(r.data);
   } catch (e) {
     toast(e.message, 'err');
-    btn.disabled = false; btn.textContent = '✓ 提交';
+    btn.disabled = false; btn.textContent = '提交';
   }
 }
 
@@ -339,7 +339,7 @@ async function submitSingle() {
     renderSuccess(r.data, true);
   } catch (e) {
     toast(e.message, 'err');
-    btn.disabled = false; btn.textContent = '✓ 提交';
+    btn.disabled = false; btn.textContent = '提交';
   }
 }
 
@@ -353,10 +353,11 @@ function renderSuccess(d, isSingle) {
     : '';
   app.innerHTML = `
     <div class="card center">
-      <h2>✅ 提交成功</h2>
+      <div class="closed-ico">${successMark()}</div>
+      <h2>提交成功</h2>
       <p class="muted mt">${d.edit_count > 0 ? `已保存为第 ${d.version} 版（修改 ${d.edit_count} 次）` : '文档已生成'}</p>
       <div class="success-actions">
-        <button class="btn btn--primary" id="dl">⬇ 下载本地（docx）</button>
+        <button class="btn btn--primary" id="dl">下载本地（docx）</button>
         ${isSingle ? '' : '<button class="btn btn--ghost" id="edit">重新编辑</button>'}
         ${nextAct}
         <button class="btn btn--ghost" id="back">${isSingle ? '再填一份' : '返回名单列表'}</button>
@@ -377,6 +378,14 @@ function downloadSub(sid) {
   a.click();
   a.remove();
   toast('开始下载', 'ok');
+}
+
+// 线条黑白标记（替换 emoji）
+function successMark() {
+  return '<svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink)"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.3l3 3 6-6.6"/></svg>';
+}
+function alertMark() {
+  return '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ink-2)"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>';
 }
 
 boot();

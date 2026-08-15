@@ -1,5 +1,5 @@
 // frontend/admin/js/roster.js
-import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate } from './common.js';
+import { api, initShell, toast, Modal, confirmDialog, esc, fmtDate, icon } from './common.js';
 
 initShell('roster');
 const content = document.getElementById('content');
@@ -33,7 +33,7 @@ async function load() {
         ${list.length ? `<table class="table"><thead><tr>
           <th>名称</th><th>人数</th><th>表头</th><th>关联模板</th><th>上传时间</th><th class="actions">操作</th>
         </tr></thead><tbody>${list.map(r => rowHtml(r, linkedCount[r.id] || 0)).join('')}</tbody></table>`
-        : '<div class="empty"><span class="ico">▥</span>暂无名单，点击「上传名单」导入 Excel</div>'}
+        : `<div class="empty">${icon('roster', 30)}<div>暂无名单，点击「上传名单」导入 Excel</div></div>`}
       </div></div>`;
     bind(list);
   } catch (e) {

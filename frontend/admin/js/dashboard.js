@@ -1,5 +1,5 @@
 // frontend/admin/js/dashboard.js
-import { api, initShell, toast, esc, fmtDate } from './common.js';
+import { api, initShell, toast, esc, fmtDate, icon } from './common.js';
 
 initShell('dashboard');
 const content = document.getElementById('content');
@@ -23,20 +23,20 @@ async function load() {
 
     content.innerHTML = `
       <div class="stat-grid">
-        ${statCard(tList.length, '模板总数', '▤', 'brand')}
-        ${statCard(sList.length, '提交记录', '▦', 'ok')}
-        ${statCard(todayCount, '今日提交', '✎', 'warn')}
-        ${statCard(rList.length, '名单数', '▥', '')}
+        ${statCard(tList.length, '模板总数', 'templates', 'brand')}
+        ${statCard(sList.length, '提交记录', 'submissions', 'ok')}
+        ${statCard(todayCount, '今日提交', 'edit', 'warn')}
+        ${statCard(rList.length, '名单数', 'roster', '')}
       </div>
 
       <div class="card mt">
         <div class="card-head"><h2>快速操作</h2></div>
         <div class="card-body">
           <div class="quick-grid">
-            <a class="quick" href="templates.html"><span class="ico">+</span><div><div class="t">新建模板</div><div class="d">创建 / 上传 docx 解析</div></div></a>
-            <a class="quick" href="roster.html"><span class="ico">↑</span><div><div class="t">上传名单</div><div class="d">导入 Excel 自动去重</div></div></a>
-            <a class="quick" href="submissions.html"><span class="ico">↓</span><div><div class="t">导出记录</div><div class="d">批量导出为 zip</div></div></a>
-            <a class="quick" href="settings.html"><span class="ico">⚙</span><div><div class="t">站点设置</div><div class="d">域名 · 保留策略</div></div></a>
+            <a class="quick" href="templates.html">${icon('plus', 18)}<div><div class="t">新建模板</div><div class="d">创建 / 上传 docx 解析</div></div></a>
+            <a class="quick" href="roster.html">${icon('upload', 18)}<div><div class="t">上传名单</div><div class="d">导入 Excel 自动去重</div></div></a>
+            <a class="quick" href="submissions.html">${icon('download', 18)}<div><div class="t">导出记录</div><div class="d">批量导出为 zip</div></div></a>
+            <a class="quick" href="settings.html">${icon('settings', 18)}<div><div class="t">站点设置</div><div class="d">域名 · 保留策略</div></div></a>
           </div>
         </div>
       </div>
@@ -51,7 +51,7 @@ async function load() {
                 <td>${esc(t.category || '未分类')}</td>
                 <td>${statusBadge(t.status)}</td>
                 <td class="muted">${fmtDate(t.updated_at)}</td></tr>`).join('')}</tbody></table>`
-            : '<div class="empty"><span class="ico">▤</span>暂无模板，请前往「模板管理」创建</div>'}
+            : `<div class="empty">${icon('templates', 30)}<div>暂无模板，请前往「模板管理」创建</div></div>`}
           </div>
         </div>
         <div class="card">
@@ -62,7 +62,7 @@ async function load() {
                 <td><b>${esc(s.submitter || s.submitter_id || '匿名')}</b></td>
                 <td class="muted">${esc(tplName[s.template_id] || '-')}</td>
                 <td class="muted">${fmtDate(s.created_at)}</td></tr>`).join('')}</tbody></table>`
-            : '<div class="empty"><span class="ico">▦</span>暂无提交记录</div>'}
+            : `<div class="empty">${icon('submissions', 30)}<div>暂无提交记录</div></div>`}
           </div>
         </div>
       </div>`;
@@ -71,9 +71,9 @@ async function load() {
   }
 }
 
-function statCard(num, label, ico, variant) {
+function statCard(num, label, ic, variant) {
   const v = variant ? ' stat--' + variant : '';
-  return `<div class="card stat${v}"><div class="ico">${ico}</div><div><div class="num">${num}</div><div class="lbl">${label}</div></div></div>`;
+  return `<div class="card stat${v}">${icon(ic, 22)}<div><div class="num">${num}</div><div class="lbl">${label}</div></div></div>`;
 }
 function statusBadge(s) {
   if (s === 'published') return '<span class="badge badge--ok">已发布</span>';

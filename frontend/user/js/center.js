@@ -6,6 +6,7 @@ if (!me) { window.location.replace('/user/login.html?redirect=' + encodeURICompo
 
 document.getElementById('who').textContent = (me ? me.name : '') + ' · ' + (me && me.role === 'teacher' ? '教师' : me && me.role === 'admin' ? '管理员' : '学生');
 document.getElementById('logout').addEventListener('click', doLogout);
+document.getElementById('btnBack').addEventListener('click', () => { window.location.href = '/user/pool.html'; });
 
 const list = document.getElementById('list');
 
