@@ -43,7 +43,7 @@ async function load() {
 
       <div class="grid mt" style="grid-template-columns:repeat(auto-fit,minmax(380px,1fr))">
         <div class="card">
-          <div class="card-head"><h2>最近模板</h2><a class="link" href="templates.html">查看全部 →</a></div>
+          <div class="card-head"><h2>最近模板</h2><a class="link" href="templates.html">查看全部 ${icon('arrow-right',16)}</a></div>
           <div class="card-body" style="padding:0">
             ${tList.length ? `<table class="table"><thead><tr><th>名称</th><th>分类</th><th>状态</th><th>更新时间</th></tr></thead>
               <tbody>${tList.slice(0, 5).map(t => `<tr>
@@ -55,7 +55,7 @@ async function load() {
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><h2>最近提交</h2><a class="link" href="submissions.html">查看全部 →</a></div>
+          <div class="card-head"><h2>最近提交</h2><a class="link" href="submissions.html">查看全部 ${icon('arrow-right',16)}</a></div>
           <div class="card-body" style="padding:0">
             ${sList.length ? `<table class="table"><thead><tr><th>提交人</th><th>模板</th><th>时间</th></tr></thead>
               <tbody>${sList.slice(0, 5).map(s => `<tr>

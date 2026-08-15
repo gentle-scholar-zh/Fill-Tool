@@ -1,5 +1,5 @@
 // frontend/user/js/center.js —— 学生个人中心：我的提交历史 + 修改入口
-import { api, esc, toast, logout as doLogout } from '/admin/js/common.js';
+import { api, esc, toast, logout as doLogout, icon } from '/admin/js/common.js';
 
 const me = (() => { try { return JSON.parse(localStorage.getItem('ft_user') || 'null'); } catch (_) { return null; } })();
 if (!me) { window.location.replace('/user/login.html?redirect=' + encodeURIComponent('/user/center.html')); }
@@ -15,7 +15,7 @@ const list = document.getElementById('list');
     const r = await api.getSubmissionsMine();
     const items = r.data || [];
     if (!items.length) {
-      list.innerHTML = '<div class="pool-empty">你还没有提交过任何模板。<a href="/user/pool.html" style="color:var(--brand)">去填写 →</a></div>';
+      list.innerHTML = `<div class="pool-empty">你还没有提交过任何模板。<a href="/user/pool.html" style="color:var(--brand)">去填写 ${icon('arrow-right',16)}</a></div>`;
       return;
     }
     list.innerHTML = items.map(it => `
