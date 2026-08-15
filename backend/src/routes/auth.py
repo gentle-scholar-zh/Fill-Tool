@@ -184,3 +184,65 @@ def api_change_password():
                (generate_password_hash(new_pwd), u['id']))
     db.commit()
     return jsonify({'code': 0, 'data': True})
+
+
+# ============================================================================
+# 一次性超管初始化 HTTP 端点（无需 SSH/CLI，浏览器 POST 即可）
+# ----------------------------------------------------------------------------
+# 用途：Railway 等无 SSH/Shell 环境下，部署首次启动后用此端点创建首个超级管理员。
+# 安全性：
+#   1. 仅当数据库中没有 is_super=1 的用户时才生效（已存在 → 403）
+#   2. POST 请求体 { name, phone, password }
+#   3. phone 不可重复（已存在 → 400）
+#   4. 密码长度 < 6 → 400
+#   5. 初始化成功后自动返回账号信息（含明文密码一次，供管理员记录）
+# 部署顺序：
+#   1. Settings → Volumes 挂 /data（Mount Path = /data）
+#   2. Variables 加 DATA_DIR = /data
+#   3. Redeploy（触发拉新代码 + 挂卷）
+#   4. curl -X POST https://huanhuan.dpdns.org/api/bootstrap/super-admin \
+#        -H "Content-Type: application/json" \
+#        -d '{"name":"超级管理员","phone":"13800000000","password":"你的强密码"}'
+# ============================================================================
+@bp.route('/api/bootstrap/super-admin', methods=['POST'])
+def api_bootstrap_super_admin():
+    data = request.get_json() or {}
+    name = (data.get('name') or '超级管理员').strip()
+    phone = (data.get('phone') or '').strip()
+    password = data.get('password') or ''
+
+    if not phone:
+        return jsonify({'code': 1, 'message': '缺少手机号'}), 400
+    if not phone.isdigit() or len(phone) < 7:
+        return jsonify({'code': 1, 'message': '手机号格式不正确'}), 400
+    if len(password) < 6:
+        return jsonify({'code': 1, 'message': '密码至少 6 位'}), 400
+
+    db = get_db()
+    # 安全检查 1：已存在超级管理员 → 拒绝
+    if db.execute('SELECT 1 FROM users WHERE is_super = 1').fetchone():
+        return jsonify({'code': 1, 'message': '系统已存在超级管理员，禁止重复初始化'}), 403
+    # 安全检查 2：手机号重复 → 拒绝
+    if db.execute('SELECT 1 FROM users WHERE phone = ?', (phone,)).fetchone():
+        return jsonify({'code': 1, 'message': '该手机号已注册'}), 400
+
+    uid = gen_id()
+    username = phone
+    db.execute('''INSERT INTO users (id, name, username, role, email, phone, password_hash, is_super, status, created_at)
+                  VALUES (?, ?, ?, 'admin', '', ?, ?, 1, 'active', ?)''',
+               (uid, name, username, phone, generate_password_hash(password), now_str()))
+    db.commit()
+    return jsonify({
+        'code': 0,
+        'message': '超级管理员创建成功，请使用下方账号登录',
+        'data': {
+            'id': uid,
+            'name': name,
+            'phone': phone,
+            'role': 'admin',
+            'is_super': True,
+            'password': password,  # 仅初始化时返回一次，管理员自行记录
+            'login_url': '/user/login.html',
+            'note': '为安全起见，登录后请尽快修改密码',
+        }
+    })
