@@ -2,7 +2,7 @@
 """应用工厂：创建 Flask 应用、配置 CORS、注册路由与数据库钩子。"""
 import os
 
-from flask import Flask, request
+from flask import Flask, request, Response
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -52,6 +52,23 @@ def create_app() -> Flask:
         return resp
 
     register_routes(app)
+
+    # 微信公众号「业务域名」校验文件：微信后台要求根路径可访问特定文件以证明域名所有权。
+    # 注意：业务域名验证仅去除网页底部"此网页由 xxx 提供"灰条，不解决微信对动态DNS域名的风控拦截。
+    # 若未来为其他域名（如已购 .com）配置业务域名，把新的 文件名->内容 加入此字典即可。
+    _WECHAT_VERIFY_FILES = {
+        '405a55ceab4b4143f5221d996024d361.txt': '047b4a152f2926bafc60193a25800cc3a311d1a0',
+    }
+
+    def _make_wechat_verify_view(content: str):
+        def _view():
+            return Response(content, mimetype='text/plain; charset=utf-8')
+        return _view
+
+    for _fn, _ct in _WECHAT_VERIFY_FILES.items():
+        app.add_url_rule('/' + _fn, view_func=_make_wechat_verify_view(_ct),
+                         endpoint='wechat_verify_' + _fn.replace('.', '_'))
+
     return app
 
 
