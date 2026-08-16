@@ -146,12 +146,25 @@ textarea { resize: vertical; min-height: 92px; }
 .auth-form .field { margin-bottom: 15px; }
 .auth-foot { text-align: center; font-size: 13px; color: var(--ink-3); margin-top: 16px; }
 .auth-foot a { color: var(--accent); font-weight: 600; }
+.auth-foot--center { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.auth-foot--center a { text-decoration: none; }
 
 /* ===== 公共模板池（门户） ===== */
 .hero { text-align: center; margin-bottom: 18px; }
 .hero .mark { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1.5px solid var(--ink); border-radius: 13px; color: var(--ink); margin-bottom: 12px; }
 .hero h1 { font-size: 22px; font-weight: 680; letter-spacing: .3px; margin: 0; }
 .hero-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 6px; }
+/* 右下角浮动设置按钮（公共模板池） */
+.fab {
+  position: fixed; right: 22px; bottom: 22px; z-index: 50;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--brand); color: #fff; border: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18); cursor: pointer;
+  transition: transform .12s, background .12s;
+}
+.fab:hover { transform: translateY(-1px); background: #000; }
+.fab:active { transform: translateY(0); }
 .btn--xs { padding: 5px 12px; font-size: 12.5px; border-radius: 9px; }
 .hero p { font-size: 13.5px; color: var(--ink-3); margin-top: 7px; }
 .ptoolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }

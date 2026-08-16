@@ -60,6 +60,9 @@ async function load() {
               <span class="switch"><input type="checkbox" id="pub-login" ${settings.public_require_login === '1' ? 'checked' : ''}><span class="slider"></span></span>
               <span class="lbl">公开模板需要登录后才能填写</span>
             </label>
+            <div class="verify-hint mt" id="pub-hint">${settings.public_require_login === '1'
+              ? '当前为 <b>需登录</b> 模式：访客打开 <code>/user/pool.html</code> 时会自动跳转登录页。'
+              : '当前为 <b>免登录</b> 模式：任何人打开 <code>/user/pool.html</code> 即可填写，仅通过 IP+模板 ID 区分。'}</div>
             <div class="mt"><button class="btn btn--primary" id="btn-save-pub">保存</button></div>
           </div>
         </div>
@@ -73,6 +76,12 @@ async function load() {
             <div><span class="muted">数据库：</span><b>本地 SQLite</b></div>
           </div>
         </div>
+      </div>
+      <div class="card mt">
+        <div class="card-head"><h2>更新日志</h2>
+          <div class="spacer"></div>
+          <a class="btn btn--xs btn--ghost" href="changelog.html" id="go-cl">查看全部 / 管理</a></div>
+        <div class="card-body" id="cl-readonly">加载中…</div>
       </div>`;
     content.querySelector('#btn-save-url').addEventListener('click', async () => {
       const v = document.getElementById('site-url').value.trim();
@@ -92,6 +101,46 @@ async function load() {
   } catch (e) {
     content.innerHTML = `<div class="card"><div class="card-body" style="color:var(--danger)">加载失败：${esc(e.message)}</div></div>`;
   }
+
+  // 加载更新日志（只读展示最新 1 条；管理页跳 changelog.html）
+  try {
+    const r = await api.getChangelog();
+    const list = (r.data || []).filter(c => (c.content || []).length || (c.content && typeof c.content === 'object'));
+    const box = document.getElementById('cl-readonly');
+    if (!box) return;
+    if (!list.length) { box.innerHTML = '<div class="muted">暂无更新日志</div>'; return; }
+    const top = list[0];
+    const parsed = parseClContent(top.content);
+    let body;
+    if (parsed.sections) {
+      body = parsed.sections.map(s => `
+        <div class="cg-section">
+          <div class="cg-cat cg-cat--${s.key}">${esc(s.label)}</div>
+          <ul>${s.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+        </div>`).join('');
+    } else {
+      body = `<ul>${parsed.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    }
+    box.innerHTML = `
+      <div class="cg-item" style="margin-bottom:6px">
+        <div class="cg-top"><b>${esc(top.version)}</b><span class="cg-date">${esc(top.date || '')}</span></div>
+        ${body}
+      </div>`;
+  } catch (_) {}
+}
+
+function parseClContent(c) {
+  let obj = c;
+  if (typeof c === 'string') { try { obj = JSON.parse(c); } catch (_) { return { items: [c] }; } }
+  if (Array.isArray(obj)) return { items: obj };
+  if (obj && typeof obj === 'object') {
+    const map = { new: '新增', improve: '优化', fix: '修复' };
+    const sections = Object.keys(obj)
+      .filter(k => Array.isArray(obj[k]) && obj[k].length)
+      .map(k => ({ key: k, label: map[k] || k, items: obj[k] }));
+    if (sections.length) return { sections };
+  }
+  return { items: [] };
 }
 
 load();

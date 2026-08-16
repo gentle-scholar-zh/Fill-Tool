@@ -128,7 +128,10 @@ def api_login():
     if not row:
         return jsonify({'code': 1, 'message': '账号或密码错误'}), 401
     user = row_to_dict(row)
-    if not user['password_hash'] or not check_password_hash(user['password_hash'], password):
+    if not user['password_hash']:
+        # 账号尚未设置密码（管理员创建时未填）；引导用户通过「忘记密码」流程申请
+        return jsonify({'code': 1, 'message': '该账号尚未设置密码，请通过「忘记密码」流程申请设置', 'need_password': True}), 401
+    if not check_password_hash(user['password_hash'], password):
         return jsonify({'code': 1, 'message': '账号或密码错误'}), 401
     if user.get('status') == 'disabled':
         return jsonify({'code': 1, 'message': '账号已被禁用'}), 403

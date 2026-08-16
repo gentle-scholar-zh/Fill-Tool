@@ -1,6 +1,6 @@
 // frontend/user/js/register.js
 // 公共注册仅允许学生角色；teacher/admin 由超级管理员在后台创建
-import { api, toast, renderChangelog } from '/admin/js/common.js';
+import { api, toast } from '/admin/js/common.js';
 
 const form = document.getElementById('regForm');
 const btn = document.getElementById('submitBtn');
@@ -34,4 +34,3 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-renderChangelog(document.getElementById('changelog'));

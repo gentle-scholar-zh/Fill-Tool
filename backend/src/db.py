@@ -211,23 +211,47 @@ def init_db():
             db.execute(sql)
         except Exception:
             pass
-    # ---- PRD V2.1：首次启动写入真实更新日志（仅当为空） ----
+    # ---- PRD V2.1：首次启动写入 / 升级更新日志（仅当为空或与最新规范化版本不一致时覆盖） ----
     try:
-        if not db.execute('SELECT 1 FROM changelog').fetchone():
+        v21_content = json.dumps({
+            'new': [
+                '公共模板池：访客可填写已发布的公开模板（默认免登录，可在「设置 → 公共填写访问控制」中切换为登录后填写）',
+                '用户账号体系：自助注册仅限学生；教师 / 管理员账号仅由超级管理员在后台创建',
+                '找回密码流程：登录页提交申请 → 管理员在「通知中心」审批 → 通过后新密码立即生效并通知申请人',
+                '后台一键重置密码：管理员可生成临时密码并通知用户首次登录后修改',
+                '账号启用 / 禁用：管理员可在后台切换用户状态，被禁用户登录时返回明确错误',
+                '角色分组下拉：新建 / 编辑用户按「前台用户 / 后台用户」分组，避免误选角色',
+            ],
+            'improve': [
+                '后台与公共模板池界面升级：统一黑白线条图标与紧凑按钮样式',
+                '空状态统一为单行展示并保留左侧留白，便于快速定位入口',
+                '模板管理「分类」筛选改为基于模板自身的分类字段，不再混入名单分组',
+                '公共模板池右上「我的」入口改为右下角浮动设置按钮，更不打扰浏览',
+                '登录页标题改为「Fill Tool」；登录按钮下方居中放置「找回密码 / 立即注册」链接，去除装饰图标与下划线',
+                '公共填写访问控制新增切换状态即时提示，明确当前生效模式',
+            ],
+            'fix': [
+                '部署后数据丢失：补齐数据卷挂载（DATA_DIR）支持，避免容器重启清空 SQLite',
+                '后台编辑用户表单整合密码字段与重置按钮，修复原「行内按钮生成临时密码」在创建用户时的不合理行为',
+                '更新日志从页面边角移入「设置」页底部卡片，并新增后台侧栏「更新日志」管理入口',
+            ],
+        }, ensure_ascii=False)
+        cur = db.execute('SELECT id, version, content_json FROM changelog WHERE id = ?', ('v21',)).fetchone()
+        if not cur:
             db.execute(
                 'INSERT INTO changelog (id, version, date, content_json, created_at) VALUES (?,?,?,?,?)',
-                ('v21', 'V2.1.0', '2026-08-16',
-                 json.dumps([
-                    '用户体系：自助注册仅限学生；教师 / 管理员仅由超级管理员在后台创建',
-                    '密码安全：支持登录后自助改密；后台可一键重置任意用户密码；登录页「忘记密码」可申请，管理员在通知中心批准后生效',
-                    '账号管理：后台支持启用 / 禁用用户',
-                    '数据持久化：部署可挂载数据卷（Railway Volume + DATA_DIR），重启不再丢失数据',
-                    '公开模板池：后台新增「公开模板池」入口；公共池页面提供「我的」一键进入个人中心',
-                    '界面升级：全站改用黑白线条图标，重设计后台 / 用户端，空状态统一为单行样式',
-                    '角色选择：新建 / 编辑用户按「前台用户 / 后台用户」分组',
-                 ], ensure_ascii=False),
-                 now_str())
+                ('v21', 'V2.1.0', '2026-08-16', v21_content, now_str())
             )
+        else:
+            # 已存在：对齐规范化版本（仅当结构不一致时覆盖）
+            try:
+                parsed = json.loads(cur['content_json'] or '{}')
+                if not isinstance(parsed, dict) or 'new' not in parsed:
+                    db.execute('UPDATE changelog SET content_json = ?, date = ? WHERE id = ?',
+                               (v21_content, '2026-08-16', 'v21'))
+            except Exception:
+                db.execute('UPDATE changelog SET content_json = ?, date = ? WHERE id = ?',
+                           (v21_content, '2026-08-16', 'v21'))
     except Exception:
         pass
     db.commit()

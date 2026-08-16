@@ -1,5 +1,5 @@
 // frontend/user/js/login.js
-import { api, setCurrentUser, toast, renderChangelog, Modal, icon } from '/admin/js/common.js';
+import { api, setCurrentUser, toast, Modal } from '/admin/js/common.js';
 
 const form = document.getElementById('loginForm');
 const btn = document.getElementById('submitBtn');
@@ -47,5 +47,3 @@ if (forgotLink) {
     m.render();
   });
 }
-
-renderChangelog(document.getElementById('changelog'));

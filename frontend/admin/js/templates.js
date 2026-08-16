@@ -24,12 +24,12 @@ let curCat = '';   // 分类筛选当前值
 async function load() {
   content.innerHTML = '<div class="card"><div class="card-body muted">加载中…</div></div>';
   try {
-    const [tRes, rRes, cRes] = await Promise.all([api.getTemplates(), api.getRoster(), api.getCategories()]);
+    const [tRes, rRes] = await Promise.all([api.getTemplates(), api.getRoster()]);
     let list = tRes.data || [];
     const rosters = rRes.data || [];
-    const cats = cRes.data || [];
-    const rosterById = {};
-    rosters.forEach(r => { rosterById[r.id] = r; });
+    // 模板的分类由各模板的 category 字段自管；直接从列表里去重，不再调用 categories（那是名单分组）。
+    const tmplCats = Array.from(new Set(list.map(t => (t.category || '未分类').trim()).filter(Boolean)));
+    tmplCats.sort((a, b) => a.localeCompare(b, 'zh-Hans-CN'));
 
     if (curCat) list = list.filter(t => (t.category || '未分类') === curCat);
 
@@ -48,7 +48,7 @@ async function load() {
     }));
 
     const catOpts = ['<option value="">全部分类</option>']
-      .concat(cats.map(c => `<option value="${esc(c.name)}" ${curCat === c.name ? 'selected' : ''}>${esc(c.name)}</option>`))
+      .concat(tmplCats.map(c => `<option value="${esc(c)}" ${curCat === c ? 'selected' : ''}>${esc(c)}</option>`))
       .join('');
 
     content.innerHTML = `

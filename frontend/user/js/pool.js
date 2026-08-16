@@ -1,5 +1,5 @@
 // frontend/user/js/pool.js —— 公共模板池：选模板 → 动态渲染表单 → 提交 → 修改（PRD 2.2 / 5 / 额外修改按钮）
-import { api, esc, toast, renderChangelog } from '/admin/js/common.js';
+import { api, esc, toast } from '/admin/js/common.js';
 
 const me = (() => { try { return JSON.parse(localStorage.getItem('ft_user') || 'null'); } catch (_) { return null; } })();
 
@@ -273,4 +273,3 @@ function enterEdit(sub) {
 }
 
 boot();
-renderChangelog(document.getElementById('changelog'));

@@ -49,10 +49,6 @@ def api_create_user():
         return jsonify({'code': 1, 'message': '学生必须填写学号'}), 400
     if password and len(password) < 6:
         return jsonify({'code': 1, 'message': '密码至少 6 位'}), 400
-    if not password:
-        # 管理员代创建但未填密码时，自动生成一个临时密码（10 位）
-        import secrets
-        password = secrets.token_urlsafe(8)
 
     db = get_db()
     if phone and db.execute('SELECT 1 FROM users WHERE phone = ?', (phone,)).fetchone():
@@ -62,7 +58,12 @@ def api_create_user():
 
     uid = gen_id()
     username = phone or email or gen_id()
-    password_hash = generate_password_hash(password)
+    # 若管理员未指定密码，则创建「待设密码」账号：password_hash 留 NULL，
+    # 登录路由会返回明确错误并引导用户走「忘记密码」流程。
+    if password:
+        password_hash = generate_password_hash(password)
+    else:
+        password_hash = None
     is_super = 1 if (role == 'admin' and data.get('is_super')) else 0
     db.execute('''INSERT INTO users (id, name, username, role, email, phone, class_name, student_id,
                   password_hash, status, is_super, created_at)
@@ -73,8 +74,10 @@ def api_create_user():
     row = db.execute('SELECT * FROM users WHERE id = ?', (uid,)).fetchone()
     resp = row_to_dict(row)
     resp.pop('password_hash', None)
-    if password and not data.get('password'):
-        resp['generated_password'] = password  # 把自动生成的临时密码返回给前端展示一次
+    if password:
+        resp['has_password'] = True
+    else:
+        resp['has_password'] = False
     return jsonify({'code': 0, 'data': resp})
 
 
@@ -114,6 +117,14 @@ def api_update_user(uid):
                 data.get('phone'), data.get('class_name'), data.get('student_id'),
                 (1 if new_is_super else 0) if new_is_super is not None else None,
                 uid))
+    # 编辑表单中显式给出 password 时才更新；留空表示不动密码。
+    new_pwd = data.get('password')
+    if isinstance(new_pwd, str) and new_pwd.strip():
+        pwd = new_pwd.strip()
+        if len(pwd) < 6:
+            return jsonify({'code': 1, 'message': '密码至少 6 位'}), 400
+        db.execute('UPDATE users SET password_hash = ? WHERE id = ?',
+                   (generate_password_hash(pwd), uid))
     db.commit()
     row = db.execute('SELECT * FROM users WHERE id = ?', (uid,)).fetchone()
     resp = row_to_dict(row)

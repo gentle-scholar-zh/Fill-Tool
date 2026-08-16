@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>注册 - 填表平台</title>
-<link rel="stylesheet" href="/user/css/style.css">
+<title>注册 - Fill Tool</title>
+  <link rel="stylesheet" href="/user/css/style.css">
 </head>
 <body>
 <div class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:7px"><path d="M4 11l8-7 8 7M6 10v10h12V10"/></svg>填表平台</div>
+    <div class="auth-brand">Fill Tool</div>
     <h2>注册学生账号</h2>
     <div class="auth-note">教师 / 管理员账号仅由超级管理员创建。如需开通，请联系平台管理员。</div>
     <form id="regForm" class="auth-form" novalidate>
@@ -42,11 +42,12 @@
         <input class="input" id="pwd2" type="password" placeholder="再次输入密码" required>
       </div>
       <button class="btn btn--primary" id="submitBtn" type="submit">注 册</button>
-      <div class="auth-foot">已有账号？<a href="/user/login.html">去登录</a></div>
+      <div class="auth-foot auth-foot--center">
+        <a href="/user/login.html">已有账号？去登录</a>
+      </div>
     </form>
   </div>
-  <div id="changelog"></div>
 </div>
-<script type="module" src="/user/js/register.js"></script>
+<script type="module" src="js/register.js"></script>
 </body>
 </html>

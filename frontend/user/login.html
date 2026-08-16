@@ -1,15 +1,16 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <base href="/user/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>登录 - 填表平台</title>
-<link rel="stylesheet" href="/user/css/style.css">
+<title>登录 - Fill Tool</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="auth-wrap">
   <div class="auth-card">
-    <div class="auth-brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:7px"><path d="M4 11l8-7 8 7M6 10v10h12V10"/></svg>填表平台</div>
+    <div class="auth-brand">Fill Tool</div>
     <h2>登录</h2>
     <form id="loginForm" class="auth-form" novalidate>
       <div class="field">
@@ -21,14 +22,13 @@
         <input class="input" id="pwd" type="password" placeholder="请输入密码" autocomplete="current-password" required>
       </div>
       <button class="btn btn--primary" id="submitBtn" type="submit">登 录</button>
-      <div class="auth-foot">
-        <a href="#" id="forgotLink">忘记密码？</a>
-        <span style="float:right"><a href="/user/register.html">立即注册</a></span>
+      <div class="auth-foot auth-foot--center">
+        <a href="#" id="forgotLink">找回密码</a>
+        <a href="/user/register.html">立即注册</a>
       </div>
     </form>
   </div>
-  <div id="changelog"></div>
 </div>
-<script type="module" src="/user/js/login.js"></script>
+<script type="module" src="js/login.js"></script>
 </body>
 </html>

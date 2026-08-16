@@ -371,6 +371,14 @@ hr.sep { border: none; border-top: 1px solid var(--line-2); margin: 14px 0; }
 .cg-item .cg-top b { font-size: 14px; }
 .cg-item .cg-date { font-size: 12px; color: var(--ink-3); }
 .cg-item ul { margin: 6px 0 0; padding-left: 18px; }
+.cg-section { margin-top: 8px; }
+.cg-section:first-of-type { margin-top: 10px; }
+.cg-cat { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; margin-bottom: 4px; }
+.cg-cat--new     { background: #e7f3ed; color: #15633d; }
+.cg-cat--improve { background: #e6eef9; color: #1b3e7a; }
+.cg-cat--fix     { background: #fbe8e7; color: #8a2a22; }
+.cg-edit { display: flex; flex-direction: column; gap: 10px; }
+.cg-edit .cg-section--edit .cg-content { min-height: 56px; }
 
 /* ===== 开关（是否公开 / 是否需登录） ===== */
 .switch { position: relative; display: inline-block; width: 44px; height: 25px; flex: 0 0 44px; }

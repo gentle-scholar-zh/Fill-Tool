@@ -351,7 +351,8 @@ const NAV = [
   { key: 'notifications', label: '通知', icon: 'notifications', href: 'notifications.html', roles: ['admin', 'teacher'] },
   { key: 'recycle', label: '回收站', icon: 'recycle', href: 'recycle.html', roles: ['admin'] },
   { key: 'settings', label: '设置', icon: 'settings', href: 'settings.html', roles: ['admin', 'teacher'] },
-  { key: 'public-pool', label: '公开模板池', icon: 'share', href: '/user/pool.html', target: '_blank', roles: ['admin', 'teacher'] },
+  { key: 'changelog', label: '更新日志', icon: 'info', href: 'changelog.html', roles: ['admin'] },
+  { key: 'share-hub', label: '分享中心', icon: 'share', href: 'share-hub.html', roles: ['admin', 'teacher'] },
 ];
 
 export function initShell(active) {
